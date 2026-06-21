@@ -59,7 +59,7 @@ export function LandingPage() {
           <div className="flex items-center gap-4">
   <div className="bg-white rounded-2xl p-2 shadow-lg border border-white/10">
     <img
-      src="/Araak-logo.png"
+      src="/araak-logo.png"
       alt="شعار مجموعة أراك"
       className="h-12 lg:h-14 w-auto object-contain"
     />
@@ -100,8 +100,8 @@ export function LandingPage() {
                 <span className="gradient-text-gold">وتسويق المشاريع</span>
               </h1>
               <p className="mt-6 text-lg lg:text-xl text-navy-200 leading-relaxed max-w-2xl">
-                منظومة رقمية متكاملة لإدارة دورة حياة المنافسات والمشاريع، من استكشاف الفرص
-                حتى التسليم، مع لوحات تنفيذية فاخرة ومستشار ذكي وصلاحيات احترافية مرنة.
+                منظومة رقمية متكاملة لإدارة ومتابعة المنافسات والمشاريع، بدءاً من  استكشاف الفرص
+                حتى التسليم ونتائج المنافسة، مع لوحات تنفيذية ومستشار ذكي وصلاحيات تحكم مرنة.
               </p>
             </div>
 
@@ -148,7 +148,7 @@ export function LandingPage() {
               <div className="inline-flex items-center justify-center mb-4">
   <div className="bg-white rounded-2xl p-3 shadow-lg border border-navy-100">
     <img
-      src="/Araak-logo.png"
+      src="/araak-logo.png"
       alt="شعار مجموعة أراك"
       className="h-16 w-auto object-contain"
     />

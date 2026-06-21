@@ -78,7 +78,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
             <div className="flex items-center gap-3 min-w-0">
   <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden">
     <img
-      src="/Araak-logo.png"
+      src="/araak-logo.png"
       alt="شعار أراك"
       className="h-10 w-auto object-contain"
     />

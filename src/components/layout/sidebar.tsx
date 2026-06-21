@@ -75,16 +75,24 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
         {/* الهيدر */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-navy-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-araak-400 to-araak-700 flex items-center justify-center shadow-glow">
-              <svg viewBox="0 0 48 48" className="w-7 h-7 text-white" fill="none">
-                <path d="M24 10 L36 18 V30 L24 38 L12 30 V18 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none" opacity="0.9"/>
-                <path d="M18 30 L24 19 L30 30 M20 26 H28" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <div className="font-bold text-navy-900 text-lg leading-tight">أراك</div>
-              <div className="text-[11px] text-navy-500 font-medium">منصة PMCC</div>
-            </div>
+            <div className="flex items-center gap-3 min-w-0">
+  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden">
+    <img
+      src="/Araak-logo.png"
+      alt="شعار أراك"
+      className="h-10 w-auto object-contain"
+    />
+  </div>
+
+  <div className="min-w-0">
+    <div className="font-bold text-navy-900 text-base leading-tight">
+      مجموعة أراك
+    </div>
+    <div className="text-[11px] text-navy-500 font-medium truncate">
+      منصة إدارة المنافسات والمشاريع
+    </div>
+  </div>
+</div>
           </div>
           <button
             onClick={onClose}

@@ -7,12 +7,8 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { ROLE_LABELS } from '@/lib/constants';
 
-interface Props {
-  onEnter: () => void;
-  showApp: boolean;
-}
 
-export function LandingPage({ onEnter, showApp }: Props) {
+export function LandingPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -60,18 +56,25 @@ export function LandingPage({ onEnter, showApp }: Props) {
       {/* الهيدر */}
       <header className="relative z-10 px-6 lg:px-12 py-6">
         <nav className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-araak-400 to-araak-700 flex items-center justify-center shadow-glow">
-              <svg viewBox="0 0 48 48" className="w-8 h-8 text-white" fill="none">
-                <path d="M24 10 L36 18 V30 L24 38 L12 30 V18 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none" opacity="0.9"/>
-                <path d="M18 30 L24 19 L30 30 M20 26 H28" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <span className="text-white font-bold text-xl tracking-tight">أراك</span>
-              <div className="text-araak-300 text-xs font-medium">منصة إدارة المنافسات والمشاريع</div>
-            </div>
-          </div>
+          <div className="flex items-center gap-4">
+  <div className="bg-white rounded-2xl p-2 shadow-lg border border-white/10">
+    <img
+      src="/Araak-logo.png"
+      alt="شعار مجموعة أراك"
+      className="h-12 lg:h-14 w-auto object-contain"
+    />
+  </div>
+
+  <div>
+    <div className="text-white font-bold text-2xl leading-tight">
+      مجموعة أراك
+    </div>
+
+    <div className="text-araak-300 text-sm font-medium">
+      Araak Marketing Platform
+    </div>
+  </div>
+</div>
           <div className="hidden md:flex items-center gap-6 text-sm text-navy-200">
             <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-araak-400" /> بيئة آمنة</span>
             <span className="flex items-center gap-1.5"><Award className="w-4 h-4 text-gold-400" /> معتمدة مؤسسياً</span>
@@ -87,7 +90,7 @@ export function LandingPage({ onEnter, showApp }: Props) {
             {/* شارة المؤسسة */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-dark border border-white/10">
               <Sparkles className="w-4 h-4 text-gold-400" />
-              <span className="text-navy-100 text-sm font-medium">منصة قيادية متكاملة لمجموعة أراك</span>
+              <span className="text-navy-100 text-sm font-medium">منصة التسويق لمجموعة أراك</span>
             </div>
 
             <div>
@@ -142,22 +145,18 @@ export function LandingPage({ onEnter, showApp }: Props) {
           <div className="lg:col-span-5 lg:sticky lg:top-8 animate-scale-in">
             <div className="glass-card rounded-3xl p-8 shadow-glass-lg">
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-araak-500 to-araak-700 shadow-glow mb-3">
-                  <Target className="w-7 h-7 text-white" />
-                </div>
+              <div className="inline-flex items-center justify-center mb-4">
+  <div className="bg-white rounded-2xl p-3 shadow-lg border border-navy-100">
+    <img
+      src="/Araak-logo.png"
+      alt="شعار مجموعة أراك"
+      className="h-16 w-auto object-contain"
+    />
+  </div>
+</div>
                 <h2 className="text-2xl font-bold text-navy-900">تسجيل الدخول</h2>
                 <p className="text-navy-600 text-sm mt-1">الدخول مخصص لأعضاء فريق التسويق</p>
               </div>
-
-              {showApp && (
-                <button
-                  onClick={onEnter}
-                  className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-l from-araak-500 to-araak-600 text-white font-semibold hover:shadow-glow transition-all"
-                >
-                  دخول المنصة
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -226,7 +225,7 @@ export function LandingPage({ onEnter, showApp }: Props) {
               </form>
 
               <div className="mt-6 pt-6 border-t border-navy-100">
-                <p className="text-xs text-navy-500 mb-3 font-medium">أعضاء فريق التسويق المعتمدون:</p>
+                <p className="text-xs text-navy-500 mb-3 font-medium">أعضاء فريق تسويق المشاريع:</p>
                 <div className="space-y-1.5">
                   {[
                     { name: 'د. علي العتيبي', role: 'ceo' as const, title: 'الرئيس التنفيذي' },
@@ -245,7 +244,7 @@ export function LandingPage({ onEnter, showApp }: Props) {
                   ))}
                   <div className="flex items-center gap-1.5 text-xs text-navy-400 pt-1.5">
                     <ChevronRight className="w-3 h-3" />
-                    <span>+ 6 أعضاء فريق تخصصيين</span>
+                    <span>+ 6 أعضاء فريق تسويق المشاريع</span>
                   </div>
                 </div>
               </div>
@@ -298,7 +297,7 @@ export function LandingPage({ onEnter, showApp }: Props) {
             <Building2 className="w-4 h-4 text-araak-400" />
             <span>منصة أراك لإدارة المنافسات والمشاريع — جميع الحقوق محفوظة</span>
           </div>
-          <span>PMCC Enterprise v2.0</span>
+          <span>ARAAK Marketing Enterprise v2.0</span>
         </div>
       </footer>
     </div>

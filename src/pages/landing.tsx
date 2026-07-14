@@ -110,7 +110,7 @@ export function LandingPage() {
               {[
                 { icon: Layers, label: 'وحدات المنصة', value: '11+' },
                 { icon: Gauge, label: 'مؤشرات الأداء', value: '24+' },
-                { icon: Users, label: 'أعضاء الفريق', value: '9' },
+                { icon: Users, label: 'أعضاء الفريق', value: '8' },
               ].map((s, i) => (
                 <div key={i} className="glass-dark rounded-2xl p-5 border border-white/10">
                   <s.icon className="w-5 h-5 text-araak-400 mb-2" />
@@ -230,7 +230,6 @@ export function LandingPage() {
                   {[
                     { name: 'د. علي العتيبي', role: 'ceo' as const, title: 'الرئيس التنفيذي' },
                     { name: 'د. لؤي أحمد', role: 'vp' as const, title: 'نائب الرئيس التنفيذي' },
-                    { name: 'أ. هاني محمد', role: 'marketing_lead' as const, title: 'نائب الرئيس للاستثمار' },
                   ].map((m, i) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">

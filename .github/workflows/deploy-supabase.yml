@@ -37,3 +37,6 @@ jobs:
 
       - name: Deploy member access function
         run: supabase functions deploy member-access --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID" --use-api
+
+      - name: Deploy institutional access function
+        run: supabase functions deploy institutional-access --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID" --use-api

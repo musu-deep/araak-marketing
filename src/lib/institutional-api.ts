@@ -1,4 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
+import { supabase } from './supabase';
+
+const INSTITUTIONAL_TOKEN_KEY = 'araak_ceo_access_token';
 
 export interface InstitutionalUser {
   id: string;
@@ -37,17 +40,35 @@ export interface OdooEmployee {
   updated_at: string | null;
 }
 
-interface ErrorPayload {
+interface InstitutionalErrorPayload {
+  ok?: boolean;
   message?: string;
   detail?: string;
 }
 
-async function readJson<T>(response: Response): Promise<T> {
-  const payload = await response.json().catch(() => ({})) as T & ErrorPayload;
-  if (!response.ok) {
-    throw new Error(payload.message || payload.detail || `HTTP ${response.status}`);
+async function edgeErrorMessage(error: unknown): Promise<string> {
+  if (error && typeof error === 'object' && 'context' in error) {
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const payload = await context.clone().json() as InstitutionalErrorPayload;
+        if (payload.message || payload.detail) return payload.message || payload.detail || '';
+      } catch {
+        // Fall through to the generic message below.
+      }
+    }
   }
-  return payload;
+  return error instanceof Error ? error.message : 'تعذر الاتصال ببوابة الهوية المؤسسية.';
+}
+
+async function invokeInstitutional<T extends InstitutionalErrorPayload>(
+  body: Record<string, unknown>,
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T>('institutional-access', { body });
+  if (error) throw new Error(await edgeErrorMessage(error));
+  if (!data) throw new Error('لم تُرجع بوابة الهوية المؤسسية استجابة صالحة.');
+  if (data.ok === false) throw new Error(data.message || data.detail || 'تعذر تنفيذ العملية المؤسسية.');
+  return data;
 }
 
 export async function institutionalSignIn(email: string, password: string): Promise<{
@@ -57,23 +78,26 @@ export async function institutionalSignIn(email: string, password: string): Prom
   workforceSource: string;
   warning?: string | null;
 }> {
-  const response = await fetch('/api/auth-login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const payload = await readJson<{
+  const payload = await invokeInstitutional<{
     ok: boolean;
     session: Session;
     user: InstitutionalUser;
     identity_source: string;
     workforce_source: string;
+    institutional_token: string;
     warning?: string | null;
-  }>(response);
+  }>({
+    action: 'login',
+    email,
+    password,
+  });
 
-  if (!payload.ok || !payload.session?.access_token || !payload.session?.refresh_token) {
+  if (!payload.session?.access_token || !payload.session?.refresh_token) {
     throw new Error('تعذر إنشاء جلسة المنصة المؤسسية.');
+  }
+
+  if (payload.institutional_token) {
+    sessionStorage.setItem(INSTITUTIONAL_TOKEN_KEY, payload.institutional_token);
   }
 
   return {
@@ -85,22 +109,30 @@ export async function institutionalSignIn(email: string, password: string): Prom
   };
 }
 
+export function clearInstitutionalSession(): void {
+  sessionStorage.removeItem(INSTITUTIONAL_TOKEN_KEY);
+}
+
 export async function fetchOdooEmployees(accessToken: string): Promise<{
   employees: OdooEmployee[];
   total: number;
   directoryTotal: number;
   restricted: boolean;
 }> {
-  const response = await fetch('/api/odoo-employees', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  if (!accessToken) throw new Error('جلسة المنصة غير موجودة.');
+  const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
+  if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الخروج ثم ادخل من جديد.');
 
-  const payload = await readJson<{
+  const payload = await invokeInstitutional<{
+    ok: boolean;
     employees: OdooEmployee[];
     total: number;
     directory_total: number;
     restricted: boolean;
-  }>(response);
+  }>({
+    action: 'directory',
+    institutional_token: institutionalToken,
+  });
 
   return {
     employees: payload.employees ?? [],
@@ -116,8 +148,23 @@ export async function fetchOdooStatus(accessToken: string): Promise<{
   url?: string;
   message: string;
 }> {
-  const response = await fetch('/api/odoo-status', {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  if (!accessToken) throw new Error('جلسة المنصة غير موجودة.');
+  const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
+  if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الدخول من جديد.');
+
+  const result = await invokeInstitutional<{
+    ok: boolean;
+    source?: string;
+    directory_total?: number;
+    warning?: string | null;
+  }>({
+    action: 'status',
+    institutional_token: institutionalToken,
   });
-  return readJson(response);
+
+  return {
+    configured: true,
+    connected: true,
+    message: result.warning || `تم الاتصال بالدليل المؤسسي (${result.directory_total ?? 0} موظف).`,
+  };
 }

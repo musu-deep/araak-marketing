@@ -1,48 +1,81 @@
 import {
-  LayoutDashboard, Radar, FileCog, ListTodo, Users, FolderOpen,
-  BellRing, Lightbulb, BarChart3, Brain, Settings as SettingsIcon,
-  X, ChevronLeft,
+  BadgeDollarSign,
+  BarChart3,
+  BellRing,
+  Brain,
+  ChevronLeft,
+  FileCog,
+  FolderOpen,
+  LayoutDashboard,
+  Lightbulb,
+  ListTodo,
+  Radar,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Users,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ROLE_LABELS, initials } from '@/lib/constants';
-import type { PermissionKey } from '@/lib/types';
+import type { PermissionKey, RoleKey } from '@/lib/types';
 
 type PageKey =
   | 'dashboard' | 'opportunities' | 'tenders' | 'tasks' | 'team'
   | 'documents' | 'accountability' | 'lessons' | 'reports'
-  | 'ai-advisor' | 'settings';
+  | 'ai-advisor' | 'executive-control' | 'pricing-matrix' | 'settings';
+
+type NavGroup = 'main' | 'tools' | 'executive' | 'insights' | 'admin';
 
 interface NavItem {
   key: PageKey;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   perm: PermissionKey;
-  group: 'main' | 'tools' | 'admin';
+  group: NavGroup;
+  roles?: RoleKey[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'اللوحة التنفيذية', icon: LayoutDashboard, perm: 'dashboard', group: 'main' },
   { key: 'opportunities', label: 'رادار الفرص', icon: Radar, perm: 'opportunity_radar', group: 'main' },
   { key: 'tenders', label: 'إدارة المناقصات', icon: FileCog, perm: 'tender_management', group: 'main' },
-  { key: 'tasks', label: 'إدارة المهام', icon: ListTodo, perm: 'tasks', group: 'main' },
+  { key: 'tasks', label: 'إدارة المهام والتزمين', icon: ListTodo, perm: 'tasks', group: 'main' },
   { key: 'team', label: 'تعاون الفريق', icon: Users, perm: 'team', group: 'main' },
   { key: 'documents', label: 'مركز الوثائق', icon: FolderOpen, perm: 'documents', group: 'main' },
   { key: 'accountability', label: 'المتابعة والمساءلة', icon: BellRing, perm: 'accountability', group: 'main' },
   { key: 'ai-advisor', label: 'مستشار AI', icon: Brain, perm: 'ai_advisor', group: 'tools' },
-  { key: 'lessons', label: 'الدروس المستفادة', icon: Lightbulb, perm: 'lessons', group: 'tools' },
-  { key: 'reports', label: 'التقارير التنفيذية', icon: BarChart3, perm: 'reports', group: 'tools' },
+  {
+    key: 'executive-control',
+    label: 'المتابعة والرقابة',
+    icon: ShieldCheck,
+    perm: 'executive_management' as PermissionKey,
+    group: 'executive',
+    roles: ['ceo', 'vp'],
+  },
+  {
+    key: 'pricing-matrix',
+    label: 'مصفوفة التسعير',
+    icon: BadgeDollarSign,
+    perm: 'pricing_matrix' as PermissionKey,
+    group: 'executive',
+    roles: ['ceo', 'vp'],
+  },
+  { key: 'lessons', label: 'الدروس المستفادة', icon: Lightbulb, perm: 'lessons', group: 'insights' },
+  { key: 'reports', label: 'التقارير التنفيذية', icon: BarChart3, perm: 'reports', group: 'insights' },
   { key: 'settings', label: 'الإعدادات', icon: SettingsIcon, perm: 'settings', group: 'admin' },
 ];
 
-const GROUP_LABELS: Record<string, string> = {
+const GROUP_LABELS: Record<NavGroup, string> = {
   main: 'الرئيسية',
-  tools: 'الأدوات التحليلية',
+  tools: 'الاستشارة الذكية',
+  executive: 'الإدارة العليا',
+  insights: 'المعرفة والتقارير',
   admin: 'الإدارة',
 };
 
 interface Props {
   currentPage: PageKey;
-  onNavigate: (p: PageKey) => void;
+  onNavigate: (page: PageKey) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -50,12 +83,14 @@ interface Props {
 export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
   const { member, hasPermission } = useAuth();
 
-  const visibleItems = NAV_ITEMS.filter((item) => hasPermission(item.perm));
-  const groups = Array.from(new Set(visibleItems.map((i) => i.group)));
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    const roleAllowed = !item.roles || Boolean(member && item.roles.includes(member.role_key));
+    return roleAllowed && hasPermission(item.perm);
+  });
+  const groups = Array.from(new Set(visibleItems.map((item) => item.group)));
 
   return (
     <>
-      {/* Overlay للموبايل */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-navy-950/50 backdrop-blur-sm lg:hidden animate-fade-in"
@@ -72,27 +107,20 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
           ${isOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* الهيدر */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-navy-100">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden">
-    <img
-      src="/araak-logo.png"
-      alt="شعار أراك"
-      className="h-10 w-auto object-contain"
-    />
-  </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden">
+              <img
+                src="/araak-logo.png"
+                alt="شعار أراك"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
 
-  <div className="min-w-0">
-    <div className="font-bold text-navy-900 text-base leading-tight">
-      مجموعة أراك
-    </div>
-    <div className="text-[11px] text-navy-500 font-medium truncate">
-      منصة إدارة المنافسات والمشاريع
-    </div>
-  </div>
-</div>
+            <div className="min-w-0">
+              <div className="font-bold text-navy-900 text-base leading-tight">مجموعة أراك</div>
+              <div className="text-[11px] text-navy-500 font-medium truncate">منصة إدارة المنافسات والمشاريع</div>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -102,7 +130,6 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
           </button>
         </div>
 
-        {/* التنقل */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
           {groups.map((group) => (
             <div key={group}>
@@ -111,7 +138,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
               </p>
               <div className="space-y-1">
                 {visibleItems
-                  .filter((i) => i.group === group)
+                  .filter((item) => item.group === group)
                   .map((item) => {
                     const active = currentPage === item.key;
                     return (
@@ -131,7 +158,6 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
           ))}
         </nav>
 
-        {/* بطاقة المستخدم */}
         {member && (
           <div className="p-4 border-t border-navy-100">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-l from-araak-50 to-navy-50 border border-araak-100">

@@ -5,7 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DEFAULT_CEO_API_URL = 'https://musu-deep-nexgen-executives-ar.vercel.app';
+const DEFAULT_CEO_API_URLS = [
+  'https://nexgen-executives.vercel.app',
+  'https://musu-deep-nexgen-executives-ar.vercel.app',
+  'https://musu-deep-nexgen-executives-ar-4dip.vercel.app',
+];
 const ADMIN_ROLES = new Set(['ceo', 'vp', 'marketing_lead']);
 
 interface InstitutionalRequest {
@@ -61,8 +65,13 @@ function normaliseUrl(value: string): string {
   return value.trim().replace(/\/+$/, '');
 }
 
-function ceoApiUrl(): string {
-  return normaliseUrl(Deno.env.get('ARAAK_CEO_API_URL') || DEFAULT_CEO_API_URL);
+function ceoApiUrls(): string[] {
+  const configured = Deno.env.get('ARAAK_CEO_API_URL') || '';
+  return Array.from(new Set(
+    [configured, ...DEFAULT_CEO_API_URLS]
+      .map(normaliseUrl)
+      .filter(Boolean),
+  ));
 }
 
 function roleFromCeo(role = '', title = ''): string {
@@ -92,6 +101,38 @@ async function fetchJson(url: string, init: RequestInit): Promise<{ response: Re
   return { response, payload };
 }
 
+async function loginWithCeo(email: string, password: string): Promise<{
+  baseUrl: string;
+  response: Response;
+  payload: Record<string, unknown>;
+}> {
+  const errors: string[] = [];
+
+  for (const baseUrl of ceoApiUrls()) {
+    try {
+      const result = await fetchJson(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'User-Agent': 'ARAAK-Marketing-Institutional-Access/2.1',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (result.response.ok || [400, 401, 403, 422, 429].includes(result.response.status)) {
+        return { baseUrl, ...result };
+      }
+
+      errors.push(`${baseUrl}: HTTP ${result.response.status}`);
+    } catch (error) {
+      errors.push(`${baseUrl}: ${error instanceof Error ? error.message : 'network error'}`);
+    }
+  }
+
+  throw new Error(`تعذر الوصول إلى بوابة ARAAK CEO. ${errors.join(' | ')}`);
+}
+
 async function deriveTechnicalPassword(secret: string, email: string, externalId: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -111,30 +152,46 @@ async function deriveTechnicalPassword(secret: string, email: string, externalId
   return `${digest.slice(0, 36)}Aa1!`;
 }
 
-async function listEmployees(institutionalToken: string): Promise<{ employees: EmployeeRecord[]; source: string; warning: string | null }> {
-  const { response, payload } = await fetchJson(`${ceoApiUrl()}/api/employees`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${institutionalToken}`,
-      Accept: 'application/json',
-      'User-Agent': 'ARAAK-Marketing-Institutional-Access/2.0',
-    },
-  });
+async function listEmployees(institutionalToken: string): Promise<{
+  employees: EmployeeRecord[];
+  source: string;
+  warning: string | null;
+  baseUrl: string;
+}> {
+  const errors: string[] = [];
 
-  if (!response.ok) {
-    const message = String(payload.detail || payload.message || `ARAAK CEO HTTP ${response.status}`);
-    throw new Error(message);
+  for (const baseUrl of ceoApiUrls()) {
+    try {
+      const { response, payload } = await fetchJson(`${baseUrl}/api/employees`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${institutionalToken}`,
+          Accept: 'application/json',
+          'User-Agent': 'ARAAK-Marketing-Institutional-Access/2.1',
+        },
+      });
+
+      if (!response.ok) {
+        errors.push(`${baseUrl}: HTTP ${response.status}`);
+        continue;
+      }
+
+      const employees = Array.isArray(payload.employees)
+        ? payload.employees.filter((item): item is EmployeeRecord => Boolean(item && typeof item === 'object'))
+        : [];
+
+      return {
+        employees,
+        source: String(payload.source || 'odoo'),
+        warning: payload.warning ? String(payload.warning) : null,
+        baseUrl,
+      };
+    } catch (error) {
+      errors.push(`${baseUrl}: ${error instanceof Error ? error.message : 'network error'}`);
+    }
   }
 
-  const employees = Array.isArray(payload.employees)
-    ? payload.employees.filter((item): item is EmployeeRecord => Boolean(item && typeof item === 'object'))
-    : [];
-
-  return {
-    employees,
-    source: String(payload.source || 'odoo'),
-    warning: payload.warning ? String(payload.warning) : null,
-  };
+  throw new Error(`تعذر قراءة دليل الموظفين من ARAAK CEO. ${errors.join(' | ')}`);
 }
 
 async function findAuthUser(admin: ReturnType<typeof createClient>, email: string) {
@@ -185,15 +242,8 @@ async function handleLogin(body: InstitutionalRequest) {
   const password = String(body.password || '');
   if (!email || !password) return json({ ok: false, message: 'أدخل البريد المؤسسي وكلمة المرور.' }, 422);
 
-  const { response, payload } = await fetchJson(`${ceoApiUrl()}/api/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'User-Agent': 'ARAAK-Marketing-Institutional-Access/2.0',
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  const loginResult = await loginWithCeo(email, password);
+  const { response, payload } = loginResult;
 
   if (!response.ok || !payload.access_token || !payload.user) {
     const message = String(payload.detail || payload.message || 'بيانات الدخول المؤسسية غير صحيحة.');
@@ -205,10 +255,12 @@ async function handleLogin(body: InstitutionalRequest) {
   let employee: EmployeeRecord | null = null;
   let workforceSource = 'araak-ceo';
   let warning: string | null = null;
+  let workforceGateway: string | null = null;
 
   try {
     const directory = await listEmployees(institutionalToken);
     workforceSource = directory.source;
+    workforceGateway = directory.baseUrl;
     warning = directory.warning;
     employee = directory.employees.find((item) => String(item.work_email || item.email || '').toLowerCase() === email)
       || directory.employees.find((item) => String(item.name || item.full_name || '') === String(ceoUser.name || ''))
@@ -240,6 +292,7 @@ async function handleLogin(body: InstitutionalRequest) {
   let authUser = await findAuthUser(admin, email);
   const metadata = {
     identity_source: 'araak-ceo',
+    identity_gateway: loginResult.baseUrl,
     odoo_employee_id: employee?.odoo_id || null,
     full_name: fullName,
     job_title: title,
@@ -310,7 +363,9 @@ async function handleLogin(body: InstitutionalRequest) {
   return json({
     ok: true,
     identity_source: 'araak-ceo',
+    identity_gateway: loginResult.baseUrl,
     workforce_source: workforceSource,
+    workforce_gateway: workforceGateway,
     warning,
     institutional_token: institutionalToken,
     session: signedIn.session,
@@ -346,6 +401,7 @@ async function handleDirectory(request: Request, body: InstitutionalRequest) {
   return json({
     ok: true,
     source: directory.source,
+    gateway: directory.baseUrl,
     warning: directory.warning,
     employees: visible,
     total: visible.length,
@@ -362,11 +418,7 @@ Deno.serve(async (request) => {
     const body = await request.json() as InstitutionalRequest;
     const action = body.action || 'login';
     if (action === 'login') return await handleLogin(body);
-    if (action === 'directory') return await handleDirectory(request, body);
-    if (action === 'status') {
-      const result = await handleDirectory(request, body);
-      return result;
-    }
+    if (action === 'directory' || action === 'status') return await handleDirectory(request, body);
     return json({ ok: false, message: 'العملية المطلوبة غير مدعومة.' }, 400);
   } catch (error) {
     console.error('institutional-access failed', error);

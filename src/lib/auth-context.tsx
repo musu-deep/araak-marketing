@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { institutionalSignIn } from './institutional-api';
+import { clearInstitutionalSession, institutionalSignIn } from './institutional-api';
 import type { TeamMember, Role, RoleKey } from './types';
 import { ADMIN_ROLES } from './constants';
 
@@ -155,12 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error || !data.user) {
+        clearInstitutionalSession();
         return { error: error?.message || 'تعذر إنشاء جلسة المنصة.' };
       }
 
       await loadMember(data.user);
       return { error: null };
     } catch (error) {
+      clearInstitutionalSession();
       return {
         error: error instanceof Error
           ? error.message
@@ -170,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    clearInstitutionalSession();
     await supabase.auth.signOut();
     setMember(null);
     setRole(null);

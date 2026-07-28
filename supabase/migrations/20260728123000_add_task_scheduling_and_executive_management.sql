@@ -1,62 +1,35 @@
 /*
-# تزمين المهام ومساحة الإدارة العليا
+# Task scheduling and executive management
 
-- يضيف وقت البدء والانتهاء والساعات التقديرية والمخرج المتوقع ونسبة الإنجاز.
-- ينشئ مصفوفة تسعير محكومة للرئيس التنفيذي ونائبه.
-- يضيف صلاحيات المتابعة والرقابة ومصفوفة التسعير.
+This migration targets the public schema used by the base project.
 */
 
 -- =====================================================
--- 1) تزمين المهام
+-- 1) Task scheduling
 -- =====================================================
-ALTER TABLE IF EXISTS marketing.tasks
+ALTER TABLE public.tasks
   ADD COLUMN IF NOT EXISTS start_at timestamptz,
   ADD COLUMN IF NOT EXISTS due_at timestamptz,
   ADD COLUMN IF NOT EXISTS estimated_hours numeric(8,2),
   ADD COLUMN IF NOT EXISTS progress_percent int NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS expected_output text;
 
-ALTER TABLE IF EXISTS marketing.tasks
+ALTER TABLE public.tasks
   DROP CONSTRAINT IF EXISTS tasks_progress_percent_check;
 
-ALTER TABLE IF EXISTS marketing.tasks
+ALTER TABLE public.tasks
   ADD CONSTRAINT tasks_progress_percent_check
   CHECK (progress_percent BETWEEN 0 AND 100);
 
-CREATE INDEX IF NOT EXISTS idx_tasks_start_at ON marketing.tasks(start_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON marketing.tasks(due_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_start_at ON public.tasks(start_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON public.tasks(due_at);
 
-UPDATE marketing.tasks
+UPDATE public.tasks
 SET due_at = due_date::timestamptz + interval '17 hours'
 WHERE due_at IS NULL AND due_date IS NOT NULL;
 
--- بعض نسخ المشروع تستخدم جدولاً عاماً، وبعضها تستخدم عرضاً عاماً فوق مخطط marketing.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM pg_class c
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relname = 'tasks' AND c.relkind IN ('r', 'p')
-  ) THEN
-    ALTER TABLE public.tasks
-      ADD COLUMN IF NOT EXISTS start_at timestamptz,
-      ADD COLUMN IF NOT EXISTS due_at timestamptz,
-      ADD COLUMN IF NOT EXISTS estimated_hours numeric(8,2),
-      ADD COLUMN IF NOT EXISTS progress_percent int NOT NULL DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS expected_output text;
-  ELSIF EXISTS (
-    SELECT 1
-    FROM pg_class c
-    JOIN pg_namespace n ON n.oid = c.relnamespace
-    WHERE n.nspname = 'public' AND c.relname = 'tasks' AND c.relkind = 'v'
-  ) THEN
-    EXECUTE 'CREATE OR REPLACE VIEW public.tasks WITH (security_invoker = true) AS SELECT * FROM marketing.tasks';
-  END IF;
-END $$;
-
 -- =====================================================
--- 2) صلاحيات الإدارة العليا
+-- 2) Executive permissions
 -- =====================================================
 INSERT INTO public.permissions (key, label, category, description, is_stage_permission)
 VALUES
@@ -75,6 +48,8 @@ VALUES
   ('vp', 'pricing_matrix')
 ON CONFLICT DO NOTHING;
 
+-- At this migration stage auth_user_id does not exist yet, so use the
+-- compatible email lookup. The following migration upgrades this function.
 CREATE OR REPLACE FUNCTION public.is_executive_management()
 RETURNS boolean
 LANGUAGE sql
@@ -85,16 +60,16 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.team_members tm
-    WHERE tm.email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    WHERE tm.email = COALESCE(auth.jwt() ->> 'email', '')
       AND tm.is_active = true
       AND tm.role_key IN ('ceo', 'vp')
   );
 $$;
 
 -- =====================================================
--- 3) مصفوفة التسعير
+-- 3) Pricing matrix
 -- =====================================================
-CREATE TABLE IF NOT EXISTS marketing.pricing_matrix (
+CREATE TABLE IF NOT EXISTS public.pricing_matrix (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   service_name text NOT NULL,
   category text,
@@ -115,52 +90,43 @@ CREATE TABLE IF NOT EXISTS marketing.pricing_matrix (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_pricing_matrix_status ON marketing.pricing_matrix(approval_status);
-CREATE INDEX IF NOT EXISTS idx_pricing_matrix_category ON marketing.pricing_matrix(category);
+CREATE INDEX IF NOT EXISTS idx_pricing_matrix_status ON public.pricing_matrix(approval_status);
+CREATE INDEX IF NOT EXISTS idx_pricing_matrix_category ON public.pricing_matrix(category);
 
-ALTER TABLE marketing.pricing_matrix ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pricing_matrix ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS pricing_matrix_executive_select ON marketing.pricing_matrix;
-DROP POLICY IF EXISTS pricing_matrix_executive_insert ON marketing.pricing_matrix;
-DROP POLICY IF EXISTS pricing_matrix_executive_update ON marketing.pricing_matrix;
-DROP POLICY IF EXISTS pricing_matrix_executive_delete ON marketing.pricing_matrix;
+DROP POLICY IF EXISTS pricing_matrix_executive_select ON public.pricing_matrix;
+DROP POLICY IF EXISTS pricing_matrix_executive_insert ON public.pricing_matrix;
+DROP POLICY IF EXISTS pricing_matrix_executive_update ON public.pricing_matrix;
+DROP POLICY IF EXISTS pricing_matrix_executive_delete ON public.pricing_matrix;
 
 CREATE POLICY pricing_matrix_executive_select
-ON marketing.pricing_matrix FOR SELECT
+ON public.pricing_matrix FOR SELECT
 TO authenticated
 USING (public.is_executive_management());
 
 CREATE POLICY pricing_matrix_executive_insert
-ON marketing.pricing_matrix FOR INSERT
+ON public.pricing_matrix FOR INSERT
 TO authenticated
 WITH CHECK (public.is_executive_management());
 
 CREATE POLICY pricing_matrix_executive_update
-ON marketing.pricing_matrix FOR UPDATE
+ON public.pricing_matrix FOR UPDATE
 TO authenticated
 USING (public.is_executive_management())
 WITH CHECK (public.is_executive_management());
 
 CREATE POLICY pricing_matrix_executive_delete
-ON marketing.pricing_matrix FOR DELETE
+ON public.pricing_matrix FOR DELETE
 TO authenticated
 USING (public.is_executive_management());
 
-GRANT USAGE ON SCHEMA marketing TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON marketing.pricing_matrix TO authenticated;
-
-DO $$
-BEGIN
-  IF to_regclass('public.pricing_matrix') IS NULL THEN
-    EXECUTE 'CREATE VIEW public.pricing_matrix WITH (security_invoker = true) AS SELECT * FROM marketing.pricing_matrix';
-  END IF;
-END $$;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.pricing_matrix TO authenticated;
 
-CREATE OR REPLACE FUNCTION marketing.set_pricing_matrix_updated_at()
+CREATE OR REPLACE FUNCTION public.set_pricing_matrix_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -168,8 +134,8 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS pricing_matrix_set_updated_at ON marketing.pricing_matrix;
+DROP TRIGGER IF EXISTS pricing_matrix_set_updated_at ON public.pricing_matrix;
 CREATE TRIGGER pricing_matrix_set_updated_at
-BEFORE UPDATE ON marketing.pricing_matrix
+BEFORE UPDATE ON public.pricing_matrix
 FOR EACH ROW
-EXECUTE FUNCTION marketing.set_pricing_matrix_updated_at();
+EXECUTE FUNCTION public.set_pricing_matrix_updated_at();

@@ -26,18 +26,26 @@ ARAAK CEO
 بوابة الهوية والتكامل
         │
         ▼
+Supabase Edge Function: institutional-access
+        │
+        ▼
 منصة اراك للتسويق والمناقصات
 ```
 
-تستخدم المنصة بيانات دخول ARAAK CEO نفسها، وتستدعي دليل الموظفين مباشرة من Odoo. لم يعد المستخدم يحتاج إلى تسجيل منفصل أو رقم جوال ورمز شخصي خاص بهذه المنصة.
+تستخدم المنصة بيانات دخول ARAAK CEO نفسها، وتستدعي دليل الموظفين من بوابة ARAAK CEO المرتبطة بـOdoo. لم يعد المستخدم يحتاج إلى تسجيل منفصل أو رقم جوال ورمز شخصي خاص بهذه المنصة.
 
-راجع دليل [ربط Odoo والهوية المؤسسية](./ODOO_BRIDGE.md) لإعداد متغيرات Vercel واختبار الاتصال.
+راجع دليل [ربط Odoo والهوية المؤسسية](./ODOO_BRIDGE.md) لنشر الوظيفة واختبار الاتصال.
 
 ## المرحلة الانتقالية
 
-لا تزال جداول الفرص والمنافسات والتسعير الحالية تعمل مؤقتًا على Supabase إلى أن يتم اعتماد نماذجها داخل Odoo. ينشئ جسر الهوية جلسة تقنية صامتة في Supabase بعد نجاح الدخول المؤسسي، دون أن يطلب من الموظف أي حساب أو كلمة مرور إضافية.
+لا تزال جداول الفرص والمنافسات والتسعير الحالية تعمل مؤقتًا على Supabase إلى أن يتم اعتماد نماذجها داخل Odoo. تنشئ Edge Function جلسة تقنية صامتة بعد نجاح الدخول المؤسسي، دون أن تطلب من الموظف حسابًا أو كلمة مرور إضافية.
 
-راجع دليل [تفعيل Supabase الانتقالي](./SUPABASE_ACTIVATION.md) عند إنشاء بيئة جديدة فقط.
+لا تحتاج منصة التسويق إلى نسخ `ODOO_API_KEY` أو `SUPABASE_SERVICE_ROLE_KEY` داخل Vercel. يحتاج مشروع Vercel فقط إلى:
+
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+```
 
 ## التقنيات المستخدمة
 
@@ -45,8 +53,8 @@ ARAAK CEO
 - TypeScript
 - Vite
 - Tailwind CSS
-- Odoo 19 JSON-2
-- ARAAK CEO Identity Gateway
+- Odoo عبر بوابة ARAAK CEO
+- Supabase Edge Functions
 - Supabase كجسر بيانات انتقالي
 - GitHub
 - Vercel
@@ -70,31 +78,20 @@ ARAAK CEO
 
 المصدر الرئيسي للهوية هو ARAAK CEO، والمصدر الرئيسي لبيانات الموظف هو `hr.employee` في Odoo. تُربط الهوية تلقائيًا بالدور المناسب داخل منصة التسويق لتطبيق صلاحيات الوحدات الحالية.
 
-الأدوار الأساسية:
-
-- CEO
-- VP
-- Marketing Lead
-- Executive Office
-- Executive Follow-up
-- National Director
-- Warehouse & Sales
-- Technical Office
-- CFO
-
 ## التشغيل المحلي
-
-تشغيل الواجهة فقط:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-لاختبار وظائف `/api` المحلية استخدم Vercel CLI بعد إنشاء `.env.local` من `.env.example`:
+## نشر بوابة الهوية
 
 ```powershell
-npx vercel dev
+npx --yes supabase@latest functions deploy institutional-access `
+  --no-verify-jwt `
+  --project-ref svmjtmjcuetrfmpqqbpe `
+  --use-api
 ```
 
 ## الترخيص

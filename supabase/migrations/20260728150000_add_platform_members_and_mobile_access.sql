@@ -133,15 +133,25 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.team_members AS member
-    WHERE (
-      member.auth_user_id = auth.uid()
-      OR (
-        member.auth_user_id IS NULL
-        AND member.email = COALESCE(auth.jwt() ->> 'email', '')
-      )
-    )
-    AND member.role_key IN ('ceo', 'vp', 'marketing_lead')
-    AND member.is_active = true
+    WHERE member.id = public.current_member_id()
+      AND member.role_key IN ('ceo', 'vp', 'marketing_lead')
+      AND member.is_active = true
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_executive_management()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.team_members AS member
+    WHERE member.id = public.current_member_id()
+      AND member.role_key IN ('ceo', 'vp')
+      AND member.is_active = true
   );
 $$;
 

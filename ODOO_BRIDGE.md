@@ -1,80 +1,93 @@
 # ربط منصة اراك للتسويق مع ARAAK CEO وOdoo
 
-## المعمارية الحالية
+## المعمارية المصححة
 
 ```text
 المستخدم
    │ بيانات ARAAK CEO نفسها
    ▼
-/api/auth-login
+Supabase Edge Function: institutional-access
    ├── يتحقق من الهوية عبر ARAAK CEO
-   ├── يستدعي السجل الوظيفي من Odoo hr.employee
-   └── ينشئ جلسة تقنية صامتة في Supabase لحماية البيانات الحالية
+   ├── يستدعي دليل الموظفين من بوابة ARAAK CEO المرتبطة بـ Odoo
+   └── ينشئ جلسة تقنية صامتة لحماية جداول المنصة الحالية
 
 صفحة فريق المنصة
    ▼
-/api/odoo-employees
+institutional-access (directory)
+   ▼
+ARAAK CEO /api/employees
    ▼
 Odoo hr.employee
 ```
 
-لا يختار المستخدم رقم جوال أو رمزًا شخصيًا جديدًا، ولا يُدخل مدير المنصة الأعضاء مرة أخرى. البريد والمسمى والإدارة والجوال والحالة الوظيفية تأتي من المنظومة المؤسسية.
+لا يختار المستخدم رقم جوال أو رمزًا شخصيًا جديدًا، ولا يُدخل مدير المنصة الأعضاء مرة أخرى. كما لا تحتاج منصة التسويق إلى نسخة أخرى من `ODOO_API_KEY` أو `SUPABASE_SERVICE_ROLE_KEY` داخل Vercel.
 
-## لماذا ما زال Supabase موجودًا؟
+## سبب إزالة مسار Vercel القديم
 
-يُستخدم Supabase مؤقتًا فقط لحماية وتشغيل الجداول التخصصية الحالية مثل الفرص والمنافسات ومصفوفة التسعير. الهوية البشرية ودليل الفريق أصبحا من ARAAK CEO وOdoo.
+كان المسار `/api/auth-login` يعتمد على أسرار خادمية داخل مشروع Vercel الخاص بمنصة التسويق. عند غياب أي متغير كان يعيد `503 Service Unavailable`.
 
-عند إنشاء نماذج Odoo المعتمدة للفرص والمنافسات والتسعير والوثائق، يمكن نقل هذه الجداول ثم حذف جسر Supabase نهائيًا دون تغيير تجربة المستخدم.
+أصبحت عملية الدخول الآن داخل Supabase Edge Function، حيث تتوفر مفاتيح Supabase الداخلية تلقائيًا، بينما تبقى أسرار Odoo في مكانها الأصلي داخل منصة ARAAK CEO.
 
 ## متغيرات Vercel المطلوبة
 
-انسخ القيم غير السرية كما هي، وانسخ أسرار Odoo من مشروع ARAAK CEO داخل Vercel دون إرسالها أو كتابتها في GitHub.
+يحتاج مشروع `araak-marketing` إلى متغيرين فقط:
 
 ```env
-ARAAK_CEO_API_URL=https://musu-deep-nexgen-executives-ar.vercel.app
-
-ODOO_ENABLED=true
-ODOO_URL=https://araakceo.odoo.com
-ODOO_DATABASE=<optional>
-ODOO_API_KEY=<copy from ARAAK CEO Vercel environment>
-ODOO_LANGUAGE=en_US
-ODOO_TIMEOUT_MS=20000
-
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_PUBLISHABLE_KEY=<publishable-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-ARAAK_IDENTITY_BRIDGE_SECRET=<random secret, at least 24 characters>
-
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_URL=https://svmjtmjcuetrfmpqqbpe.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` و`ODOO_API_KEY` و`ARAAK_IDENTITY_BRIDGE_SECRET` متغيرات خادمية سرية، ولا يجوز أن تبدأ أسماؤها بـ`VITE_`.
+لا تضف إلى مشروع التسويق:
 
-## إنشاء سر جسر الهوية في PowerShell
-
-```powershell
-$Bytes = New-Object byte[] 48
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($Bytes)
-[Convert]::ToBase64String($Bytes)
+```text
+ODOO_API_KEY
+SUPABASE_SERVICE_ROLE_KEY
+ARAAK_IDENTITY_BRIDGE_SECRET
 ```
 
-انسخ الناتج إلى `ARAAK_IDENTITY_BRIDGE_SECRET` في Vercel.
+## نشر الوظيفة المصححة
+
+من جذر المشروع:
+
+```powershell
+npx --yes supabase@latest functions deploy institutional-access `
+  --no-verify-jwt `
+  --project-ref svmjtmjcuetrfmpqqbpe `
+  --use-api
+```
+
+أو شغّل سكربت التفعيل، وقد تم تحديثه لينشر الوظيفتين تلقائيًا:
+
+```powershell
+powershell -ExecutionPolicy Bypass `
+  -File ".\scripts\activate-supabase.ps1" `
+  -ProjectRef "svmjtmjcuetrfmpqqbpe"
+```
+
+لا توجد migrations جديدة مطلوبة لهذا التصحيح.
 
 ## الاختبار بعد النشر
 
-1. نفّذ Redeploy في Vercel بعد إضافة المتغيرات.
-2. افتح المنصة وسجّل الدخول بحساب يعمل في ARAAK CEO.
-3. افتح صفحة **فريق المنصة** واضغط **تحديث من Odoo**.
-4. تأكد أن الاسم والمسمى والإدارة والجوال تظهر من Odoo.
-5. تأكد أن بقية وحدات المنصة ما زالت تقرأ الجداول الحالية بصورة طبيعية.
+1. اسحب آخر تحديث للفرع.
+2. انشر وظيفة `institutional-access`.
+3. تأكد من وجود متغيري `VITE_SUPABASE_*` في Preview وProduction.
+4. نفّذ Redeploy في Vercel.
+5. امسح الجلسة القديمة أو افتح نافذة خاصة.
+6. سجّل الدخول بحساب يعمل في ARAAK CEO.
+7. افتح **فريق المنصة** واضغط **تحديث من Odoo**.
+
+## الحساب التجريبي
+
+```text
+ceo@company.demo
+ExecAgent2026!
+```
+
+هذا الحساب للاختبار فقط، وليس حساب إنتاج دائمًا.
 
 ## الملفات الرئيسية
 
-- `api/auth-login.js`: توحيد الدخول وإنشاء الجلسة التقنية.
-- `api/odoo-employees.js`: دليل الموظفين المحمي.
-- `api/odoo-status.js`: فحص الاتصال.
-- `server/ceo.js`: موصل هوية ARAAK CEO.
-- `server/odoo.js`: موصل Odoo 19 JSON-2.
-- `server/supabase-bridge.js`: جسر انتقالي داخلي؛ لا يتعامل معه المستخدم.
-- `src/lib/institutional-api.ts`: عميل الواجهة.
+- `supabase/functions/institutional-access/index.ts`: الدخول المؤسسي ودليل الموظفين.
+- `src/lib/institutional-api.ts`: استدعاء Edge Function من الواجهة.
+- `src/lib/auth-context.tsx`: إدارة جلسة المنصة.
+- `scripts/activate-supabase.ps1`: نشر الوظيفتين.

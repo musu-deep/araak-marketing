@@ -12,6 +12,8 @@ import { AccountabilityPage } from '@/pages/accountability';
 import { LessonsPage } from '@/pages/lessons';
 import { ReportsPage } from '@/pages/reports';
 import { AiAdvisorPage } from '@/pages/ai-advisor';
+import { ExecutiveControlPage } from '@/pages/executive-control';
+import { PricingMatrixPage } from '@/pages/pricing-matrix';
 import { SettingsPage } from '@/pages/settings';
 import { UnauthorizedPage } from '@/pages/unauthorized';
 import type { PermissionKey } from '@/lib/types';
@@ -19,7 +21,7 @@ import type { PermissionKey } from '@/lib/types';
 type PageKey =
   | 'dashboard' | 'opportunities' | 'tenders' | 'tasks' | 'team'
   | 'documents' | 'accountability' | 'lessons' | 'reports'
-  | 'ai-advisor' | 'settings';
+  | 'ai-advisor' | 'executive-control' | 'pricing-matrix' | 'settings';
 
 const PAGE_PERMISSION: Partial<Record<PageKey, PermissionKey>> = {
   dashboard: 'dashboard',
@@ -32,15 +34,18 @@ const PAGE_PERMISSION: Partial<Record<PageKey, PermissionKey>> = {
   lessons: 'lessons',
   reports: 'reports',
   'ai-advisor': 'ai_advisor',
+  'executive-control': 'executive_management' as PermissionKey,
+  'pricing-matrix': 'pricing_matrix' as PermissionKey,
   settings: 'settings',
 };
+
+const EXECUTIVE_PAGES: PageKey[] = ['executive-control', 'pricing-matrix'];
 
 export function AppShell() {
   const { member, hasPermission } = useAuth();
   const [page, setPage] = useState<PageKey>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // استرجاع الصفحة من hash
   useEffect(() => {
     const restore = () => {
       const hash = window.location.hash.slice(1) as PageKey;
@@ -51,14 +56,16 @@ export function AppShell() {
     return () => window.removeEventListener('hashchange', restore);
   }, []);
 
-  const navigate = useCallback((p: PageKey) => {
-    setPage(p);
-    window.location.hash = p;
+  const navigate = useCallback((nextPage: PageKey) => {
+    setPage(nextPage);
+    window.location.hash = nextPage;
     setSidebarOpen(false);
   }, []);
 
-  const requiredPerm = PAGE_PERMISSION[page];
-  const hasAccess = requiredPerm ? hasPermission(requiredPerm) : true;
+  const requiredPermission = PAGE_PERMISSION[page];
+  const hasExecutiveRole = member ? ['ceo', 'vp'].includes(member.role_key) : false;
+  const roleAllowsPage = !EXECUTIVE_PAGES.includes(page) || hasExecutiveRole;
+  const hasAccess = roleAllowsPage && (requiredPermission ? hasPermission(requiredPermission) : true);
 
   if (!member) {
     return <UnauthorizedPage reason="no_member" />;
@@ -90,6 +97,8 @@ export function AppShell() {
                 {page === 'lessons' && <LessonsPage />}
                 {page === 'reports' && <ReportsPage />}
                 {page === 'ai-advisor' && <AiAdvisorPage />}
+                {page === 'executive-control' && <ExecutiveControlPage />}
+                {page === 'pricing-matrix' && <PricingMatrixPage />}
                 {page === 'settings' && <SettingsPage />}
               </div>
             )}

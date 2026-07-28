@@ -24,7 +24,8 @@ type PageKey =
   | 'documents' | 'accountability' | 'lessons' | 'reports'
   | 'ai-advisor' | 'executive-control' | 'pricing-matrix' | 'settings';
 
-type NavGroup = 'main' | 'tools' | 'executive' | 'insights' | 'admin';
+type NavGroup = 'main' | 'executive' | 'admin';
+type ExecutiveSection = 'advisory' | 'knowledge';
 
 interface NavItem {
   key: PageKey;
@@ -32,6 +33,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   perm: PermissionKey;
   group: NavGroup;
+  section?: ExecutiveSection;
   roles?: RoleKey[];
 }
 
@@ -40,16 +42,17 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'opportunities', label: 'رادار الفرص', icon: Radar, perm: 'opportunity_radar', group: 'main' },
   { key: 'tenders', label: 'إدارة المناقصات', icon: FileCog, perm: 'tender_management', group: 'main' },
   { key: 'tasks', label: 'إدارة المهام والتزمين', icon: ListTodo, perm: 'tasks', group: 'main' },
-  { key: 'team', label: 'تعاون الفريق', icon: Users, perm: 'team', group: 'main' },
+  { key: 'team', label: 'فريق المنصة', icon: Users, perm: 'team', group: 'main' },
   { key: 'documents', label: 'مركز الوثائق', icon: FolderOpen, perm: 'documents', group: 'main' },
-  { key: 'accountability', label: 'المتابعة والمساءلة', icon: BellRing, perm: 'accountability', group: 'main' },
-  { key: 'ai-advisor', label: 'مستشار AI', icon: Brain, perm: 'ai_advisor', group: 'tools' },
+  { key: 'accountability', label: 'المتابعة التنفيذية', icon: BellRing, perm: 'accountability', group: 'main' },
+  { key: 'ai-advisor', label: 'مستشار AI', icon: Brain, perm: 'ai_advisor', group: 'executive', section: 'advisory' },
   {
     key: 'executive-control',
     label: 'المتابعة والرقابة',
     icon: ShieldCheck,
     perm: 'executive_management' as PermissionKey,
     group: 'executive',
+    section: 'advisory',
     roles: ['ceo', 'vp'],
   },
   {
@@ -58,20 +61,26 @@ const NAV_ITEMS: NavItem[] = [
     icon: BadgeDollarSign,
     perm: 'pricing_matrix' as PermissionKey,
     group: 'executive',
+    section: 'advisory',
     roles: ['ceo', 'vp'],
   },
-  { key: 'lessons', label: 'الدروس المستفادة', icon: Lightbulb, perm: 'lessons', group: 'insights' },
-  { key: 'reports', label: 'التقارير التنفيذية', icon: BarChart3, perm: 'reports', group: 'insights' },
+  { key: 'lessons', label: 'الدروس المستفادة', icon: Lightbulb, perm: 'lessons', group: 'executive', section: 'knowledge' },
+  { key: 'reports', label: 'التقارير التنفيذية', icon: BarChart3, perm: 'reports', group: 'executive', section: 'knowledge' },
   { key: 'settings', label: 'الإعدادات', icon: SettingsIcon, perm: 'settings', group: 'admin' },
 ];
 
 const GROUP_LABELS: Record<NavGroup, string> = {
   main: 'الرئيسية',
-  tools: 'الاستشارة الذكية',
   executive: 'الإدارة العليا',
-  insights: 'المعرفة والتقارير',
   admin: 'الإدارة',
 };
+
+const EXECUTIVE_SECTION_LABELS: Record<ExecutiveSection, string> = {
+  advisory: 'الاستشارة الذكية',
+  knowledge: 'المعرفة والتقارير',
+};
+
+const EXECUTIVE_SECTION_ORDER: ExecutiveSection[] = ['advisory', 'knowledge'];
 
 interface Props {
   currentPage: PageKey;
@@ -88,6 +97,25 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
     return roleAllowed && hasPermission(item.perm);
   });
   const groups = Array.from(new Set(visibleItems.map((item) => item.group)));
+
+  const renderItems = (items: NavItem[]) => (
+    <div className="space-y-1">
+      {items.map((item) => {
+        const active = currentPage === item.key;
+        return (
+          <button
+            key={item.key}
+            onClick={() => onNavigate(item.key)}
+            className={`nav-link w-full ${active ? 'nav-link-active' : 'nav-link-inactive'} group`}
+          >
+            <item.icon className={`w-[18px] h-[18px] ${active ? 'text-white' : 'text-navy-500 group-hover:text-araak-600'}`} />
+            <span className="flex-1 text-right">{item.label}</span>
+            {active && <ChevronLeft className="w-4 h-4 text-white/80" />}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <>
@@ -131,31 +159,36 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          {groups.map((group) => (
-            <div key={group}>
-              <p className="px-3 mb-2 text-[11px] font-semibold text-navy-400 uppercase tracking-wider">
-                {GROUP_LABELS[group]}
-              </p>
-              <div className="space-y-1">
-                {visibleItems
-                  .filter((item) => item.group === group)
-                  .map((item) => {
-                    const active = currentPage === item.key;
-                    return (
-                      <button
-                        key={item.key}
-                        onClick={() => onNavigate(item.key)}
-                        className={`nav-link w-full ${active ? 'nav-link-active' : 'nav-link-inactive'} group`}
-                      >
-                        <item.icon className={`w-[18px] h-[18px] ${active ? 'text-white' : 'text-navy-500 group-hover:text-araak-600'}`} />
-                        <span className="flex-1 text-right">{item.label}</span>
-                        {active && <ChevronLeft className="w-4 h-4 text-white/80" />}
-                      </button>
-                    );
-                  })}
+          {groups.map((group) => {
+            const groupItems = visibleItems.filter((item) => item.group === group);
+            return (
+              <div key={group}>
+                <p className="px-3 mb-2 text-[11px] font-semibold text-navy-400 uppercase tracking-wider">
+                  {GROUP_LABELS[group]}
+                </p>
+
+                {group === 'executive' ? (
+                  <div className="space-y-4 rounded-2xl border border-navy-100 bg-navy-50/35 p-2">
+                    {EXECUTIVE_SECTION_ORDER.map((section) => {
+                      const sectionItems = groupItems.filter((item) => item.section === section);
+                      if (sectionItems.length === 0) return null;
+                      return (
+                        <div key={section}>
+                          <div className="flex items-center gap-2 px-2 mb-2">
+                            <span className="text-[10px] font-bold text-araak-700 whitespace-nowrap">
+                              {EXECUTIVE_SECTION_LABELS[section]}
+                            </span>
+                            <span className="h-px flex-1 bg-araak-100" />
+                          </div>
+                          {renderItems(sectionItems)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : renderItems(groupItems)}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {member && (

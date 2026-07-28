@@ -40,3 +40,6 @@ jobs:
 
       - name: Deploy institutional access function
         run: supabase functions deploy institutional-access --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID" --use-api
+
+      - name: Deploy filtered platform team function
+        run: supabase functions deploy platform-team --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID" --use-api

@@ -49,8 +49,8 @@ export function AccountabilityPage() {
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       <SectionHeader
-        title="المتابعة والمساءلة"
-        subtitle="تنبيهات المتابعة والتصعيد الآلي"
+        title="المتابعة التنفيذية"
+        subtitle="تنبيهات المتابعة التنفيذية والتصعيد الآلي"
         icon={BellRing}
       />
 
@@ -65,7 +65,7 @@ export function AccountabilityPage() {
 
       {filtered.length === 0 ? (
         <GlassCard>
-          <EmptyState icon={BellRing} title="لا توجد تنبيهات" description="التنبيهات الفعالة ستظهر هنا" />
+          <EmptyState icon={BellRing} title="لا توجد تنبيهات" description="تنبيهات المتابعة التنفيذية الفعالة ستظهر هنا" />
         </GlassCard>
       ) : (
         <div className="space-y-2">

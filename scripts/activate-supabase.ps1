@@ -51,8 +51,8 @@ Invoke-Supabase link --project-ref $ProjectRef
 Write-Host "`n[4/6] Reviewing migrations before applying them..." -ForegroundColor Yellow
 Invoke-Supabase db push --dry-run
 
-$confirmation = Read-Host 'Apply migrations now? Type YES to continue'
-if ($confirmation -cne 'YES') {
+$confirmation = (Read-Host 'Apply migrations now? Type Y or YES to continue').Trim().ToUpperInvariant()
+if ($confirmation -notin @('Y', 'YES')) {
   throw 'Stopped before changing the remote database.'
 }
 

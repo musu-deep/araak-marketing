@@ -60,6 +60,12 @@ interface PlatformMember {
   role_key: string;
 }
 
+interface MatchedEmployee extends EmployeeRecord {
+  platform_member_id: string;
+  platform_role: string;
+  platform_title: string | null;
+}
+
 function json(payload: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -117,7 +123,7 @@ async function listEmployees(institutionalToken: string): Promise<{
         headers: {
           Authorization: `Bearer ${institutionalToken}`,
           Accept: 'application/json',
-          'User-Agent': 'ARAAK-Marketing-Platform-Team/1.0',
+          'User-Agent': 'ARAAK-Marketing-Platform-Team/1.1',
         },
       });
 
@@ -161,6 +167,40 @@ function matchEmployee(member: PlatformMember, employees: EmployeeRecord[]): Emp
     const name = normaliseName(employee.name || employee.full_name);
     return name && name === memberName;
   }) || null;
+}
+
+async function syncOdooIdentity(
+  admin: ReturnType<typeof createClient>,
+  employee: MatchedEmployee,
+  source: string,
+): Promise<{ ok: boolean; memberId: string; error?: string }> {
+  const odooEmployeeId = Number(employee.odoo_id);
+  if (!Number.isFinite(odooEmployeeId) || odooEmployeeId <= 0) {
+    return { ok: false, memberId: employee.platform_member_id, error: 'معرف Odoo غير صالح.' };
+  }
+
+  const odooDepartmentId = Number(employee.department_id);
+  const odooManagerId = Number(employee.manager_id);
+  const phone = String(employee.mobile_phone || employee.work_phone || employee.phone || '').trim();
+
+  const { error } = await admin
+    .from('team_members')
+    .update({
+      odoo_employee_id: odooEmployeeId,
+      odoo_work_email: normaliseEmail(employee.work_email || employee.email) || null,
+      odoo_department_id: Number.isFinite(odooDepartmentId) && odooDepartmentId > 0 ? odooDepartmentId : null,
+      odoo_manager_id: Number.isFinite(odooManagerId) && odooManagerId > 0 ? odooManagerId : null,
+      odoo_entity: String(employee.entity || '').trim() || null,
+      odoo_location: String(employee.location || '').trim() || null,
+      workforce_source: source || 'odoo',
+      odoo_synced_at: new Date().toISOString(),
+      phone: phone || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', employee.platform_member_id);
+
+  if (error) return { ok: false, memberId: employee.platform_member_id, error: error.message };
+  return { ok: true, memberId: employee.platform_member_id };
 }
 
 Deno.serve(async (request) => {
@@ -211,7 +251,7 @@ Deno.serve(async (request) => {
 
     const directory = await listEmployees(institutionalToken);
     const matched = (platformMembers as PlatformMember[])
-      .map((platformMember) => {
+      .map((platformMember): MatchedEmployee | null => {
         const employee = matchEmployee(platformMember, directory.employees);
         if (!employee) return null;
         return {
@@ -221,7 +261,13 @@ Deno.serve(async (request) => {
           platform_title: platformMember.title,
         };
       })
-      .filter((employee): employee is EmployeeRecord & Record<string, unknown> => employee !== null);
+      .filter((employee): employee is MatchedEmployee => employee !== null);
+
+    const syncResults = await Promise.all(
+      matched.map((employee) => syncOdooIdentity(admin, employee, directory.source)),
+    );
+    const linkedTotal = syncResults.filter((result) => result.ok).length;
+    const syncErrors = syncResults.filter((result) => !result.ok && result.error);
 
     const isAdmin = ADMIN_ROLES.has(String(currentMember.role_key || ''));
     const currentEmail = normaliseEmail(currentMember.email);
@@ -238,6 +284,9 @@ Deno.serve(async (request) => {
     if (unmatchedCount > 0) {
       warnings.push(`${unmatchedCount} من أعضاء الفريق المعتمدين لا يملكون تطابقاً واضحاً في دليل Odoo.`);
     }
+    if (syncErrors.length > 0) {
+      warnings.push(`تعذر حفظ ربط Odoo لعدد ${syncErrors.length} من الأعضاء.`);
+    }
 
     return json({
       ok: true,
@@ -248,6 +297,7 @@ Deno.serve(async (request) => {
       total: visible.length,
       directory_total: platformMembers?.length || 0,
       matched_total: matched.length,
+      odoo_linked_total: linkedTotal,
       odoo_directory_total: directory.employees.length,
       restricted: !isAdmin,
       team_scope: 'marketing-platform-operational-team',

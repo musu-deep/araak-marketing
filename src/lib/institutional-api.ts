@@ -38,6 +38,9 @@ export interface OdooEmployee {
   active: boolean;
   created_at: string | null;
   updated_at: string | null;
+  platform_member_id?: string;
+  platform_role?: string;
+  platform_title?: string;
 }
 
 interface InstitutionalErrorPayload {
@@ -61,12 +64,13 @@ async function edgeErrorMessage(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'تعذر الاتصال ببوابة الهوية المؤسسية.';
 }
 
-async function invokeInstitutional<T extends InstitutionalErrorPayload>(
+async function invokeEdge<T extends InstitutionalErrorPayload>(
+  functionName: string,
   body: Record<string, unknown>,
 ): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<T>('institutional-access', { body });
+  const { data, error } = await supabase.functions.invoke<T>(functionName, { body });
   if (error) throw new Error(await edgeErrorMessage(error));
-  if (!data) throw new Error('لم تُرجع بوابة الهوية المؤسسية استجابة صالحة.');
+  if (!data) throw new Error('لم تُرجع الخدمة المؤسسية استجابة صالحة.');
   if (data.ok === false) throw new Error(data.message || data.detail || 'تعذر تنفيذ العملية المؤسسية.');
   return data;
 }
@@ -78,7 +82,7 @@ export async function institutionalSignIn(email: string, password: string): Prom
   workforceSource: string;
   warning?: string | null;
 }> {
-  const payload = await invokeInstitutional<{
+  const payload = await invokeEdge<{
     ok: boolean;
     session: Session;
     user: InstitutionalUser;
@@ -86,7 +90,7 @@ export async function institutionalSignIn(email: string, password: string): Prom
     workforce_source: string;
     institutional_token: string;
     warning?: string | null;
-  }>({
+  }>('institutional-access', {
     action: 'login',
     email,
     password,
@@ -123,14 +127,15 @@ export async function fetchOdooEmployees(accessToken: string): Promise<{
   const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
   if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الخروج ثم ادخل من جديد.');
 
-  const payload = await invokeInstitutional<{
+  const payload = await invokeEdge<{
     ok: boolean;
     employees: OdooEmployee[];
     total: number;
     directory_total: number;
+    matched_total?: number;
+    odoo_directory_total?: number;
     restricted: boolean;
-  }>({
-    action: 'directory',
+  }>('platform-team', {
     institutional_token: institutionalToken,
   });
 
@@ -152,12 +157,12 @@ export async function fetchOdooStatus(accessToken: string): Promise<{
   const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
   if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الدخول من جديد.');
 
-  const result = await invokeInstitutional<{
+  const result = await invokeEdge<{
     ok: boolean;
     source?: string;
     directory_total?: number;
     warning?: string | null;
-  }>({
+  }>('institutional-access', {
     action: 'status',
     institutional_token: institutionalToken,
   });

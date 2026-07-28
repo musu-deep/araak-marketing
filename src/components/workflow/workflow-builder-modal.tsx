@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock, FileStack, Sparkles, WandSparkles, X } from 'lucide-react';
+import { CalendarClock, FileStack, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { WorkflowSourceOpportunity, WorkflowSourceTender, WorkflowTemplate } from '@/lib/workflow-types';
 
@@ -140,7 +140,7 @@ export function WorkflowBuilderModal({
 
           {selectedTemplate && (
             <div className="flex items-start gap-3 rounded-2xl border border-araak-100 bg-araak-50/70 p-4">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-araak-600 text-white"><WandSparkles className="h-4 w-4" /></div>
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-araak-600 text-white"><Sparkles className="h-4 w-4" /></div>
               <div>
                 <div className="text-sm font-bold text-araak-900">{selectedTemplate.name}</div>
                 <p className="mt-1 text-xs leading-6 text-araak-800/75">{selectedTemplate.description}</p>

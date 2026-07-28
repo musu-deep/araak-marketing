@@ -1,15 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { institutionalSignIn } from './institutional-api';
 import type { TeamMember, Role, RoleKey } from './types';
 import { ADMIN_ROLES } from './constants';
-
-interface MemberAccessResponse {
-  ok: boolean;
-  email?: string;
-  first_login?: boolean;
-  message?: string;
-}
 
 interface AuthContextValue {
   session: Session | null;
@@ -19,27 +13,13 @@ interface AuthContextValue {
   permissions: string[];
   isAdmin: boolean;
   loading: boolean;
-  signIn: (fullName: string, phone: string, pin: string) => Promise<{ error: string | null; firstLogin?: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   hasPermission: (key: string) => boolean;
   refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-function normalizeDigits(value: string): string {
-  const arabic = '٠١٢٣٤٥٦٧٨٩';
-  const persian = '۰۱۲۳۴۵۶۷۸۹';
-  return value
-    .split('')
-    .map((character) => {
-      const arabicIndex = arabic.indexOf(character);
-      if (arabicIndex >= 0) return String(arabicIndex);
-      const persianIndex = persian.indexOf(character);
-      return persianIndex >= 0 ? String(persianIndex) : character;
-    })
-    .join('');
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -162,42 +142,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadMember]);
 
-  const signIn = async (fullName: string, phone: string, pin: string) => {
-    const normalizedPin = normalizeDigits(pin).replace(/\D/g, '');
-    if (!fullName.trim()) return { error: 'أدخل الاسم كما هو مسجل في فريق المنصة.' };
-    if (!phone.trim()) return { error: 'أدخل رقم الجوال المسجل.' };
-    if (!/^\d{6}$/.test(normalizedPin)) return { error: 'الرمز الشخصي يجب أن يتكون من 6 أرقام.' };
+  const signIn = async (email: string, password: string) => {
+    const normalisedEmail = email.trim().toLowerCase();
+    if (!normalisedEmail) return { error: 'أدخل البريد المؤسسي المستخدم في منصة ARAAK CEO.' };
+    if (!password) return { error: 'أدخل كلمة المرور المؤسسية.' };
 
-    const { data, error: functionError } = await supabase.functions.invoke<MemberAccessResponse>('member-access', {
-      body: {
-        full_name: fullName.trim(),
-        phone: phone.trim(),
-        pin: normalizedPin,
-      },
-    });
+    try {
+      const institutional = await institutionalSignIn(normalisedEmail, password);
+      const { data, error } = await supabase.auth.setSession({
+        access_token: institutional.session.access_token,
+        refresh_token: institutional.session.refresh_token,
+      });
 
-    if (functionError) {
-      return { error: 'تعذر الاتصال بخدمة الدخول. تأكد من نشر وظيفة member-access في Supabase.' };
-    }
-    if (!data?.ok || !data.email) {
-      return { error: data?.message ?? 'تعذر التحقق من بيانات العضو.' };
-    }
+      if (error || !data.user) {
+        return { error: error?.message || 'تعذر إنشاء جلسة المنصة.' };
+      }
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: normalizedPin,
-    });
-
-    if (authError) {
+      await loadMember(data.user);
+      return { error: null };
+    } catch (error) {
       return {
-        error: authError.message === 'Invalid login credentials'
-          ? 'الرمز الشخصي غير صحيح.'
-          : authError.message,
+        error: error instanceof Error
+          ? error.message
+          : 'تعذر الاتصال ببوابة الهوية المؤسسية.',
       };
     }
-
-    if (authData.user) await loadMember(authData.user);
-    return { error: null, firstLogin: Boolean(data.first_login) };
   };
 
   const signOut = async () => {

@@ -1,7 +1,3 @@
-import { loginWithCeo } from '../server/ceo.js';
-import { getOdooEmployees } from '../server/odoo.js';
-import { ensureInstitutionalSession } from '../server/supabase-bridge.js';
-
 function send(res, status, payload) {
   res.status(status).setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
@@ -16,6 +12,14 @@ function bodyOf(req) {
   return {};
 }
 
+function env(name, aliases = []) {
+  for (const key of [name, ...aliases]) {
+    const value = String(process.env[key] || '').trim();
+    if (value) return value;
+  }
+  return '';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -23,41 +27,48 @@ export default async function handler(req, res) {
   }
 
   try {
+    const supabaseUrl = env('VITE_SUPABASE_URL', ['SUPABASE_URL']);
+    const publishableKey = env('VITE_SUPABASE_PUBLISHABLE_KEY', [
+      'SUPABASE_PUBLISHABLE_KEY',
+      'VITE_SUPABASE_ANON_KEY',
+      'SUPABASE_ANON_KEY',
+    ]);
+
+    if (!supabaseUrl || !publishableKey) {
+      return send(res, 500, {
+        ok: false,
+        message: 'متغيرا VITE_SUPABASE_URL وVITE_SUPABASE_PUBLISHABLE_KEY غير مضافين إلى بيئة Vercel الحالية.',
+      });
+    }
+
     const body = bodyOf(req);
-    const email = String(body.email || '').trim().toLowerCase();
-    const password = String(body.password || '');
-    if (!email || !password) {
-      return send(res, 422, { ok: false, message: 'أدخل البريد المؤسسي وكلمة المرور.' });
-    }
-
-    const ceoPayload = await loginWithCeo(email, password);
-    let employee = null;
-    let warning = null;
-
-    try {
-      const employees = await getOdooEmployees();
-      employee = employees.find((item) => item.work_email === email)
-        || employees.find((item) => item.name === ceoPayload.user?.name)
-        || null;
-    } catch (error) {
-      warning = error instanceof Error ? error.message : 'تعذر قراءة بيانات الموظف من Odoo.';
-    }
-
-    const bridged = await ensureInstitutionalSession({
-      ceoUser: ceoPayload.user,
-      employee,
+    const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}/functions/v1/institutional-access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${publishableKey}`,
+        'User-Agent': 'ARAAK-Marketing-Legacy-Login-Proxy/2.0',
+      },
+      body: JSON.stringify({
+        action: 'login',
+        email: String(body.email || '').trim().toLowerCase(),
+        password: String(body.password || ''),
+      }),
     });
 
-    return send(res, 200, {
-      ok: true,
-      identity_source: 'araak-ceo',
-      workforce_source: employee ? 'odoo' : 'araak-ceo',
-      warning,
-      ...bridged,
-    });
+    const payload = await response.json().catch(() => ({
+      ok: false,
+      message: `بوابة الهوية المؤسسية أعادت HTTP ${response.status}.`,
+    }));
+
+    return send(res, response.status, payload);
   } catch (error) {
-    const status = Number(error?.status || 500);
-    const message = error instanceof Error ? error.message : 'تعذر إكمال الدخول المؤسسي.';
-    return send(res, status >= 400 && status < 600 ? status : 500, { ok: false, message });
+    return send(res, 502, {
+      ok: false,
+      message: error instanceof Error
+        ? error.message
+        : 'تعذر الاتصال بوظيفة الدخول المؤسسي.',
+    });
   }
 }

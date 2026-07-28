@@ -31,14 +31,14 @@ export function TeamPage() {
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
-      <SectionHeader title="تعاون الفريق" subtitle={isAdmin ? 'أعضاء فريق أراك ومصفوفة المسؤوليات' : 'بطاقتك الشخصية'} icon={Users} />
+      <SectionHeader title="فريق المنصة" subtitle={isAdmin ? 'أعضاء فريق المنصة ومصفوفة المسؤوليات' : 'بطاقتك ضمن فريق المنصة'} icon={Users} />
       {!isAdmin && (
         <GlassCard className="p-4 bg-araak-50 border border-araak-100">
-          <p className="text-sm text-araak-800">لك صلاحية رؤية بياناتك فقط. للوصول لقائمة الفريق الكاملة، تواصل مع مسؤول النظام.</p>
+          <p className="text-sm text-araak-800">لك صلاحية رؤية بياناتك فقط. للوصول لقائمة فريق المنصة كاملة، تواصل مع مسؤول النظام.</p>
         </GlassCard>
       )}
       {visibleMembers.length === 0 ? (
-        <GlassCard><EmptyState icon={Users} title="لا يوجد أعضاء" description="لم يتم العثور على أعضاء فريق" /></GlassCard>
+        <GlassCard><EmptyState icon={Users} title="لا يوجد أعضاء" description="لم يتم العثور على أعضاء فريق المنصة" /></GlassCard>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleMembers.map((m) => {

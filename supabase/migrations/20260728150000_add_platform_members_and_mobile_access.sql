@@ -32,9 +32,9 @@ ON CONFLICT (key) DO UPDATE SET
   description = EXCLUDED.description;
 
 INSERT INTO public.role_permissions (role_key, permission_key)
-SELECT 'technical_office', permission_key
-FROM public.permissions
-WHERE permission_key IN (
+SELECT 'technical_office', permission.key
+FROM public.permissions AS permission
+WHERE permission.key IN (
   'dashboard',
   'tender_management',
   'tasks',

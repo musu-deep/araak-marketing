@@ -59,8 +59,9 @@ if ($confirmation -notin @('Y', 'YES')) {
 Write-Host "`n[5/6] Applying migrations to the remote database..." -ForegroundColor Yellow
 Invoke-Supabase db push
 
-Write-Host "`n[6/6] Deploying the member-access Edge Function..." -ForegroundColor Yellow
+Write-Host "`n[6/6] Deploying platform Edge Functions..." -ForegroundColor Yellow
 Invoke-Supabase functions deploy member-access --no-verify-jwt --project-ref $ProjectRef --use-api
+Invoke-Supabase functions deploy institutional-access --no-verify-jwt --project-ref $ProjectRef --use-api
 
 $projectUrl = "https://$ProjectRef.supabase.co"
 
@@ -70,4 +71,5 @@ Write-Host "VITE_SUPABASE_URL=$projectUrl"
 Write-Host 'VITE_SUPABASE_PUBLISHABLE_KEY=<copy from Supabase Dashboard > Project Settings > API Keys>'
 Write-Host "`nYou can also list project API keys with:" -ForegroundColor Cyan
 Write-Host "npx supabase projects api-keys --project-ref $ProjectRef"
-Write-Host "`nAfter adding the Vercel environment variables, redeploy the Vercel project." -ForegroundColor Yellow
+Write-Host "`nNo Odoo or service-role secrets are required in the marketing Vercel project." -ForegroundColor Green
+Write-Host "After adding the two VITE variables, redeploy the Vercel project." -ForegroundColor Yellow

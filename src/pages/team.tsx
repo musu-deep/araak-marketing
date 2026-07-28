@@ -35,7 +35,7 @@ export function TeamPage() {
       setEmployees(result.employees);
       setDirectoryTotal(result.directoryTotal);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'تعذر تحميل دليل الموظفين من Odoo.');
+      setError(loadError instanceof Error ? loadError.message : 'تعذر تحميل فريق المنصة من Odoo.');
       setEmployees([]);
     } finally {
       setLoading(false);
@@ -93,8 +93,8 @@ export function TeamPage() {
       <SectionHeader
         title="فريق المنصة"
         subtitle={isAdmin
-          ? 'دليل الموظفين المؤسسي المستدعى مباشرة من Odoo'
-          : 'بياناتك الوظيفية كما هي مسجلة في Odoo'}
+          ? 'الفريق التشغيلي المعتمد للمنصة، مستدعى من Odoo دون عرض بقية موظفي المجموعة'
+          : 'بياناتك الوظيفية ضمن فريق المنصة كما هي مسجلة في Odoo'}
         icon={Users}
         action={(
           <button
@@ -112,9 +112,9 @@ export function TeamPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <ShieldCheck className="w-5 h-5 text-emerald-700 mt-0.5 flex-shrink-0" />
         <div>
-          <div className="text-sm font-semibold text-emerald-800">المصدر المؤسسي: Odoo</div>
+          <div className="text-sm font-semibold text-emerald-800">المصدر المؤسسي: Odoo — النطاق: فريق المنصة فقط</div>
           <p className="text-xs text-emerald-700 mt-0.5">
-            لا تُدخل بيانات الأعضاء في هذه المنصة مرة أخرى؛ الاسم والمسمى والإدارة والجوال والحالة الوظيفية تأتي من النظام المركزي.
+            تُستدعى بيانات الأعضاء التشغيلية المعتمدة فقط، ولا يُعرض كامل دليل موظفي المجموعة. الرئيس التنفيذي ونائبه ضمن الإشراف والاعتماد وليسا ضمن عدّاد الفريق التشغيلي.
           </p>
         </div>
       </div>
@@ -122,12 +122,12 @@ export function TeamPage() {
       {isAdmin && (
         <div className="grid sm:grid-cols-3 gap-3">
           <GlassCard className="p-4">
-            <div className="text-xs text-navy-500">الموظفون الظاهرون</div>
-            <div className="text-2xl font-bold text-navy-900 mt-1">{visibleEmployees.length}</div>
+            <div className="text-xs text-navy-500">أعضاء الفريق المعتمدون</div>
+            <div className="text-2xl font-bold text-navy-900 mt-1">{directoryTotal || visibleEmployees.length}</div>
           </GlassCard>
           <GlassCard className="p-4">
-            <div className="text-xs text-navy-500">إجمالي دليل Odoo</div>
-            <div className="text-2xl font-bold text-araak-700 mt-1">{directoryTotal || visibleEmployees.length}</div>
+            <div className="text-xs text-navy-500">المتزامنون من Odoo</div>
+            <div className="text-2xl font-bold text-araak-700 mt-1">{visibleEmployees.length}</div>
           </GlassCard>
           <GlassCard className="p-4">
             <div className="text-xs text-navy-500">الإدارات الممثلة</div>
@@ -138,7 +138,7 @@ export function TeamPage() {
 
       {!isAdmin && (
         <GlassCard className="p-4 bg-araak-50 border border-araak-100">
-          <p className="text-sm text-araak-800">تعرض لك المنصة بياناتك الوظيفية فقط، بينما تظهر الإدارة الدليل المؤسسي الكامل.</p>
+          <p className="text-sm text-araak-800">تعرض لك المنصة بياناتك الوظيفية ضمن فريق المنصة فقط، بينما تظهر للإدارة قائمة الفريق التشغيلي المعتمد.</p>
         </GlassCard>
       )}
 
@@ -150,7 +150,7 @@ export function TeamPage() {
 
       {visibleEmployees.length === 0 ? (
         <GlassCard>
-          <EmptyState icon={Users} title="لا يوجد موظفون ظاهرون" description="لم يعثر Odoo على سجل وظيفي مرتبط بحسابك المؤسسي" />
+          <EmptyState icon={Users} title="لا يوجد أعضاء ظاهرون" description="لم يعثر Odoo على تطابق لأعضاء فريق المنصة المعتمدين" />
         </GlassCard>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -162,7 +162,7 @@ export function TeamPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-navy-900 text-sm">{employee.name}</h3>
-                  <p className="text-xs text-araak-700 font-medium">{employee.job_title || 'موظف مؤسسي'}</p>
+                  <p className="text-xs text-araak-700 font-medium">{employee.platform_title || employee.job_title || 'عضو فريق المنصة'}</p>
                   {employee.department && (
                     <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-navy-50 text-navy-700">
                       <Building2 className="w-3 h-3" /> {employee.department}
@@ -173,7 +173,7 @@ export function TeamPage() {
 
               <div className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium bg-emerald-50 text-emerald-700">
                 <CheckCircle2 className="w-4 h-4" />
-                موظف نشط ومزامن من Odoo
+                عضو معتمد ومزامن من Odoo
               </div>
 
               <div className="space-y-2 text-xs text-navy-500 pt-3 border-t border-navy-50">

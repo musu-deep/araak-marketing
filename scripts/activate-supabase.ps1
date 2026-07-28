@@ -62,6 +62,7 @@ Invoke-Supabase db push
 Write-Host "`n[6/6] Deploying platform Edge Functions..." -ForegroundColor Yellow
 Invoke-Supabase functions deploy member-access --no-verify-jwt --project-ref $ProjectRef --use-api
 Invoke-Supabase functions deploy institutional-access --no-verify-jwt --project-ref $ProjectRef --use-api
+Invoke-Supabase functions deploy platform-team --no-verify-jwt --project-ref $ProjectRef --use-api
 
 $projectUrl = "https://$ProjectRef.supabase.co"
 

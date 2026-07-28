@@ -9,7 +9,7 @@ import {
   Target,
   UserCheck,
   X,
-  ChartGantt,
+  CalendarDays as ChartGantt,
   Workflow,
   Sparkles,
 } from 'lucide-react';
@@ -499,7 +499,7 @@ function TaskForm({ members, currentMemberId, activeWorkflow, stages, onClose, o
       workflow_stage_id: form.workflow_stage_id || null,
       tender_id: activeWorkflow?.tender_id ?? null,
       opportunity_id: activeWorkflow?.opportunity_id ?? null,
-      task_type: form.workflow_stage_id ? 'standalone' : 'standalone',
+      task_type: 'standalone',
     });
     setSaving(false);
     if (saveError) return setError(saveError.message);

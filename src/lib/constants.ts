@@ -96,14 +96,15 @@ export const ALERT_SEVERITY_CONFIG: Record<
   critical: { label: 'حرجة', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
 };
 
-// أسماء الأدوار بالعربية
-export const ROLE_LABELS: Record<RoleKey, string> = {
+// أسماء الأدوار بالعربية. String يسمح بعرض الأدوار المضافة من قاعدة البيانات دون حجبها في الواجهة.
+export const ROLE_LABELS: Record<string, string> = {
   ceo: 'الرئيس التنفيذي',
   vp: 'نائب الرئيس التنفيذي',
-  marketing_lead: 'مسؤول فريق تسويق المشاريع',
+  marketing_lead: 'رئيس فريق منصة التسويق والمناقصات',
   executive_followup: 'مسؤول المتابعة التنفيذية',
-  national_director: 'مدير المشاريع الوطنية',
-  warehouse_sales: 'مسؤول المستودعات والمبيعات',
+  national_director: 'مدير تنفيذي اراك الوطنية',
+  warehouse_sales: 'مسؤول المشتريات والمستودعات',
+  technical_office: 'مسؤول المكتب الفني',
   cfo: 'المدير المالي',
   executive_office: 'مسؤول المكتب التنفيذي',
   logistics: 'مسؤول اللوجستية',
@@ -168,5 +169,5 @@ export function classNames(...classes: (string | false | null | undefined)[]): s
 
 export function initials(name: string): string {
   const parts = name.replace(/^(د\.|أ\.|م\.|د |أ |م )/, '').trim().split(' ');
-  return parts.slice(0, 2).map(p => p[0]).join('');
+  return parts.slice(0, 2).map((part) => part[0]).join('');
 }

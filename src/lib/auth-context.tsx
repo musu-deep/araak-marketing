@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { clearInstitutionalSession, institutionalSignIn } from './institutional-api';
 import type { TeamMember, Role, RoleKey } from './types';
 import { ADMIN_ROLES } from './constants';
 
@@ -28,62 +29,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadMember = useCallback(async (_userId: string, email: string) => {
+  const loadMember = useCallback(async (authUser: User) => {
     try {
-      const { data: memberData, error: memberError } = await supabase
+      const memberSelect = () => supabase
         .from('team_members')
         .select(`
           *,
           department:departments(*)
-        `)
-        .eq('email', email)
-        .maybeSingle();
+        `);
 
-      if (memberError) throw memberError;
+      let memberData: Record<string, unknown> | null = null;
+      let memberError: { message: string } | null = null;
+
+      const byAuthUser = await memberSelect().eq('auth_user_id', authUser.id).maybeSingle();
+      memberData = byAuthUser.data as Record<string, unknown> | null;
+      memberError = byAuthUser.error;
+
+      const metadataMemberId = typeof authUser.user_metadata?.team_member_id === 'string'
+        ? authUser.user_metadata.team_member_id
+        : null;
+
+      if (!memberData && metadataMemberId) {
+        const byMetadata = await memberSelect().eq('id', metadataMemberId).maybeSingle();
+        memberData = byMetadata.data as Record<string, unknown> | null;
+        memberError = byMetadata.error;
+      }
+
+      if (!memberData && authUser.email) {
+        const byEmail = await memberSelect().eq('email', authUser.email).maybeSingle();
+        memberData = byEmail.data as Record<string, unknown> | null;
+        memberError = byEmail.error;
+      }
+
+      if (memberError && !memberData) throw memberError;
 
       if (memberData) {
-        const dept = memberData.department;
+        const department = memberData.department as { name?: string } | null;
         const formattedMember: TeamMember = {
-          ...memberData,
-          department_name: dept?.name ?? null,
+          ...(memberData as unknown as TeamMember),
+          department_name: department?.name ?? undefined,
         };
         setMember(formattedMember);
 
         const { data: roleData } = await supabase
           .from('roles')
           .select('*')
-          .eq('key', memberData.role_key)
+          .eq('key', formattedMember.role_key)
           .maybeSingle();
-        if (roleData) setRole(roleData as Role);
+        setRole(roleData ? roleData as Role : null);
 
-        // تحميل الصلاحيات: الدور الافتراضي + صلاحيات المستخدم المخصصة
         const { data: rolePerms } = await supabase
           .from('role_permissions')
           .select('permission_key')
-          .eq('role_key', memberData.role_key);
-        const rolePermKeys = (rolePerms ?? []).map((r: { permission_key: string }) => r.permission_key);
+          .eq('role_key', formattedMember.role_key);
+        const rolePermKeys = (rolePerms ?? []).map((item: { permission_key: string }) => item.permission_key);
 
         const { data: userPerms } = await supabase
           .from('user_permissions')
           .select('permission_key, granted')
-          .eq('team_member_id', memberData.id);
+          .eq('team_member_id', formattedMember.id);
 
         const finalPerms = new Set(rolePermKeys);
-        for (const up of userPerms ?? []) {
-          if (up.granted) {
-            finalPerms.add(up.permission_key);
-          } else {
-            finalPerms.delete(up.permission_key);
-          }
+        for (const userPermission of userPerms ?? []) {
+          if (userPermission.granted) finalPerms.add(userPermission.permission_key);
+          else finalPerms.delete(userPermission.permission_key);
         }
         setPermissions(Array.from(finalPerms));
       } else {
         setMember(null);
+        setRole(null);
         setPermissions([]);
       }
-    } catch (err) {
-      console.error('Failed to load member:', err);
+    } catch (error) {
+      console.error('Failed to load member:', error);
       setMember(null);
+      setRole(null);
       setPermissions([]);
     }
   }, []);
@@ -91,12 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       if (!mounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadMember(session.user.id, session.user.email ?? '').finally(() => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        loadMember(currentSession.user).finally(() => {
           if (mounted) setLoading(false);
         });
       } else {
@@ -104,13 +124,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        (async () => {
-          await loadMember(session.user.id, session.user.email ?? '');
-        })();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      if (currentSession?.user) {
+        void loadMember(currentSession.user);
       } else {
         setMember(null);
         setRole(null);
@@ -125,12 +143,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadMember]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return { error: null };
+    const normalisedEmail = email.trim().toLowerCase();
+    if (!normalisedEmail) return { error: 'أدخل البريد المؤسسي المستخدم في منصة ARAAK CEO.' };
+    if (!password) return { error: 'أدخل كلمة المرور المؤسسية.' };
+
+    try {
+      const institutional = await institutionalSignIn(normalisedEmail, password);
+      const { data, error } = await supabase.auth.setSession({
+        access_token: institutional.session.access_token,
+        refresh_token: institutional.session.refresh_token,
+      });
+
+      if (error || !data.user) {
+        clearInstitutionalSession();
+        return { error: error?.message || 'تعذر إنشاء جلسة المنصة.' };
+      }
+
+      await loadMember(data.user);
+      return { error: null };
+    } catch (error) {
+      clearInstitutionalSession();
+      return {
+        error: error instanceof Error
+          ? error.message
+          : 'تعذر الاتصال ببوابة الهوية المؤسسية.',
+      };
+    }
   };
 
   const signOut = async () => {
+    clearInstitutionalSession();
     await supabase.auth.signOut();
     setMember(null);
     setRole(null);
@@ -147,9 +189,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refresh = useCallback(async () => {
-    if (user?.email) {
+    if (user) {
       setLoading(true);
-      await loadMember(user.id, user.email);
+      await loadMember(user);
       setLoading(false);
     }
   }, [user, loadMember]);
@@ -167,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
 }

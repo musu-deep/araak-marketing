@@ -3,8 +3,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { DashboardPage } from '@/pages/dashboard';
-import { OpportunityRadarPage } from '@/pages/opportunity-radar';
-import { TenderManagementPage } from '@/pages/tender-management';
+import { OpportunityTenderHubPage } from '@/pages/opportunity-tender-hub';
 import { TaskManagementPage } from '@/pages/tasks';
 import { TeamPage } from '@/pages/team';
 import { DocumentsPage } from '@/pages/documents';
@@ -88,8 +87,8 @@ export function AppShell() {
             ) : (
               <div key={page} className="animate-fade-in">
                 {page === 'dashboard' && <DashboardPage onNavigate={navigate} />}
-                {page === 'opportunities' && <OpportunityRadarPage onNavigate={navigate} />}
-                {page === 'tenders' && <TenderManagementPage onNavigate={navigate} />}
+                {page === 'opportunities' && <OpportunityTenderHubPage onNavigate={navigate} initialTab="opportunities" />}
+                {page === 'tenders' && <OpportunityTenderHubPage onNavigate={navigate} initialTab="tenders" />}
                 {page === 'tasks' && <TaskManagementPage />}
                 {page === 'team' && <TeamPage />}
                 {page === 'documents' && <DocumentsPage />}

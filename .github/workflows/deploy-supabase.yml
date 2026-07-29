@@ -8,6 +8,12 @@ on:
     paths:
       - 'supabase/**'
       - '.github/workflows/deploy-supabase.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/deploy-supabase.yml'
 
 permissions:
   contents: read

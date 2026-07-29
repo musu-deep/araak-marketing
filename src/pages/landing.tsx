@@ -43,7 +43,7 @@ export function LandingPage() {
     { icon: Radar, title: 'رادار الفرص', desc: 'استكشاف وإدارة المنافسات والفرص الاستثمارية' },
     { icon: Brain, title: 'مستشار AI', desc: 'تقييم احتمالية الفوز وتحليل المخاطر بالذكاء الاصطناعي' },
     { icon: Workflow, title: 'إدارة المناقصات', desc: 'سير عمل متكامل من الاستقبال إلى النتيجة' },
-    { icon: Users, title: 'فريق المنصة', desc: 'استدعاء الموظفين مباشرة من دليل Odoo المؤسسي' },
+    { icon: Users, title: 'فريق المنصة', desc: 'إدارة الفريق التشغيلي والمسؤوليات والصلاحيات' },
     { icon: FileText, title: 'مركز الوثائق', desc: 'إدارة المستندات والإصدارات والقوالب' },
     { icon: Bell, title: 'المتابعة التنفيذية', desc: 'تنبيهات ذكية وتصعيد آلي للمسؤوليات' },
   ];
@@ -75,8 +75,8 @@ export function LandingPage() {
             </div>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-navy-200">
-            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-araak-400" /> هوية موحدة</span>
-            <span className="flex items-center gap-1.5"><Award className="w-4 h-4 text-gold-400" /> متصلة بـ Odoo</span>
+            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-araak-400" /> دخول مؤسسي آمن</span>
+            <span className="flex items-center gap-1.5"><Award className="w-4 h-4 text-gold-400" /> تشغيل متكامل</span>
           </div>
         </nav>
       </header>
@@ -96,7 +96,7 @@ export function LandingPage() {
                 <span className="gradient-text-gold">وتسويق المشاريع</span>
               </h1>
               <p className="mt-6 text-lg lg:text-xl text-navy-200 leading-relaxed max-w-2xl">
-                منظومة رقمية متكاملة لإدارة ومتابعة المنافسات والمشاريع، مرتبطة بمنصة ARAAK CEO ودليل الموظفين في Odoo، من استكشاف الفرص حتى التسليم ونتائج المنافسة.
+                منظومة رقمية متكاملة لإدارة ومتابعة المنافسات والمشاريع، من استكشاف الفرص ودراسة الكراسة حتى الاعتماد والرفع ونتائج المنافسة.
               </p>
             </div>
 
@@ -104,7 +104,7 @@ export function LandingPage() {
               {[
                 { icon: Layers, label: 'وحدات المنصة', value: '13+' },
                 { icon: Gauge, label: 'مؤشرات الأداء', value: '24+' },
-                { icon: Users, label: 'مصدر الفريق', value: 'Odoo' },
+                { icon: Users, label: 'أدوار الفريق', value: '7' },
               ].map((stat) => (
                 <div key={stat.label} className="glass-dark rounded-2xl p-5 border border-white/10">
                   <stat.icon className="w-5 h-5 text-araak-400 mb-2" />
@@ -139,8 +139,8 @@ export function LandingPage() {
                     <img src="/araak-logo.png" alt="شعار مجموعة اراك" className="h-16 w-auto object-contain" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-navy-900">الدخول المؤسسي الموحد</h2>
-                <p className="text-navy-600 text-sm mt-1">استخدم بيانات دخول منصة ARAAK CEO نفسها</p>
+                <h2 className="text-2xl font-bold text-navy-900">الدخول إلى المنصة</h2>
+                <p className="text-navy-600 text-sm mt-1">استخدم بيانات الدخول المؤسسية المعتمدة</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -170,7 +170,7 @@ export function LandingPage() {
                       required
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
-                      placeholder="كلمة مرور ARAAK CEO"
+                      placeholder="كلمة المرور"
                       className="glass-input w-full pr-10 pl-12 py-3 rounded-xl text-navy-900 placeholder-navy-400"
                       dir="ltr"
                       autoComplete="current-password"
@@ -179,7 +179,7 @@ export function LandingPage() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  <p className="mt-1.5 text-[11px] text-navy-500">لا يتم إنشاء حساب جديد يدويًا؛ تُستدعى الهوية والوظيفة من المنظومة المؤسسية.</p>
+                  <p className="mt-1.5 text-[11px] text-navy-500">يتم التحقق من الحساب المؤسسي تلقائيًا.</p>
                 </div>
 
                 {error && (
@@ -191,30 +191,17 @@ export function LandingPage() {
 
                 <button type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-l from-araak-500 to-araak-700 text-white font-semibold hover:shadow-glow transition-all disabled:opacity-60 disabled:cursor-not-allowed">
                   {submitting ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جارٍ التحقق المؤسسي...</>
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جارٍ التحقق...</>
                   ) : (
                     <>دخول المنصة <ArrowLeft className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
-
-              <div className="mt-6 pt-6 border-t border-navy-100 space-y-3">
-                {[
-                  'حساب واحد لمنصة ARAAK CEO ومنصة التسويق والمناقصات.',
-                  'المسمى والإدارة والجوال تُستدعى مباشرة من Odoo.',
-                  'تعطيل الموظف مؤسسيًا ينعكس على وصوله للمنصة.',
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-2 text-xs text-navy-600">
-                    <CheckCircle2 className="w-4 h-4 text-araak-600 mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="mt-4 flex items-start gap-2 text-xs text-navy-300 px-2">
               <Shield className="w-3.5 h-3.5 text-araak-400 mt-0.5" />
-              <span>بيانات الدخول تُرسل إلى بوابة ARAAK CEO الآمنة ولا تُحفظ داخل واجهة المنصة.</span>
+              <span>تتم معالجة بيانات الدخول عبر قناة مؤسسية آمنة.</span>
             </div>
           </div>
         </div>
@@ -230,8 +217,8 @@ export function LandingPage() {
             </div>
             <div className="grid md:grid-cols-3 gap-4">
               {[
-                { title: 'هوية مؤسسية واحدة', desc: 'لا تسجيل مكرر ولا قوائم مستخدمين منفصلة بين منصات اراك.' },
-                { title: 'بيانات تشغيلية موحدة', desc: 'الوظائف والإدارات وبيانات الموظفين تأتي من Odoo بوصفه المصدر المؤسسي.' },
+                { title: 'وضوح دورة المنافسة', desc: 'مسار واحد يربط الفرصة والدراسة والتسعير والاعتماد والرفع النهائي.' },
+                { title: 'بيانات تشغيلية متكاملة', desc: 'الفريق والمسؤوليات والمشروعات والوثائق في بيئة عمل موحدة.' },
                 { title: 'متابعة زمنية ورقابية', desc: 'تزمين المسؤوليات وقياس الإنجاز وتصعيد التعثر مبكرًا.' },
               ].map((item) => (
                 <div key={item.title} className="flex items-start gap-3">
@@ -250,7 +237,7 @@ export function LandingPage() {
       <footer className="relative z-10 px-6 lg:px-12 py-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-navy-400">
           <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-araak-400" /><span>منصة اراك لإدارة المنافسات والمشاريع — جميع الحقوق محفوظة</span></div>
-          <span>ARAAK Marketing Enterprise v3.0 • Odoo Connected</span>
+          <span>ARAAK Marketing Enterprise v3.0</span>
         </div>
       </footer>
     </div>

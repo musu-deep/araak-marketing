@@ -58,13 +58,17 @@ function stageState(stage: WorkflowStageInstance, currentStageId?: string) {
   return { label: 'قادمة', tone: 'slate' as const, delayed };
 }
 
-const TONE_CLASSES = {
-  green: 'border-emerald-200 bg-emerald-50/70 text-emerald-800',
-  blue: 'border-sky-200 bg-sky-50/70 text-sky-800',
-  amber: 'border-amber-200 bg-amber-50/70 text-amber-800',
-  red: 'border-red-200 bg-red-50/80 text-red-800',
-  slate: 'border-slate-200 bg-slate-50/80 text-slate-700',
+const STATE_BADGE_CLASSES = {
+  green: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  blue: 'border-sky-200 bg-sky-50 text-sky-800',
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  red: 'border-red-200 bg-red-50 text-red-800',
+  slate: 'border-slate-200 bg-slate-50 text-slate-700',
 };
+
+function colorWithAlpha(color: string, alpha: string) {
+  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}${alpha}` : color;
+}
 
 interface WorkflowTimelineProps {
   workflow: WorkflowInstance;
@@ -201,7 +205,7 @@ export function WorkflowTimeline({
       <section className="rounded-[28px] border border-navy-100 bg-white/80 p-4 lg:p-6 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.6)] backdrop-blur-xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="flex items-center gap-2 text-lg font-extrabold text-navy-900"><Gauge className="h-5 w-5 text-araak-600" /> المسار المرحلي ثلاثي الأبعاد</h3>
+            <h3 className="flex items-center gap-2 text-lg font-extrabold text-navy-900"><Gauge className="h-5 w-5 text-araak-600" /> المسار الزمني</h3>
             <p className="mt-1 text-xs text-navy-500">كل بطاقة تمثل محطة تسليم واضحة بين إدارة وأخرى؛ مرّر أفقيًا لاستعراض كامل الرحلة.</p>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px]">
@@ -232,8 +236,8 @@ export function WorkflowTimeline({
                   />
                   {index < orderedStages.length - 1 && (
                     <div className="relative mx-1 flex w-14 items-center justify-center">
-                      <div className="h-1 w-full rounded-full bg-gradient-to-l from-araak-400 to-navy-200 shadow-[0_5px_12px_rgba(14,132,148,.25)]" />
-                      <ArrowLeft className="absolute -left-1 h-5 w-5 text-araak-600" />
+                      <div className="h-1 w-full rounded-full bg-gradient-to-l from-araak-400/70 to-sky-200/80 shadow-[0_5px_12px_rgba(14,132,148,.18)]" />
+                      <ArrowLeft className="absolute -left-1 h-5 w-5 text-araak-500/80" />
                     </div>
                   )}
                 </div>
@@ -283,45 +287,57 @@ function StageCard({
   onProgress: (stage: WorkflowStageInstance, value: number) => Promise<void>;
 }) {
   const daysLate = delayDays(stage);
+  const stageSoft = colorWithAlpha(stage.color, '10');
+  const stageSofter = colorWithAlpha(stage.color, '08');
+  const stageBorder = colorWithAlpha(stage.color, '38');
+  const stageShadow = colorWithAlpha(stage.color, '28');
+
   return (
     <article
       className={classNames(
-        'relative w-[238px] overflow-hidden rounded-3xl border p-4 transition-all duration-300 hover:-translate-y-2',
-        TONE_CLASSES[state.tone],
-        isCurrent && 'ring-2 ring-cyan-400 ring-offset-2',
+        'relative w-[238px] overflow-hidden rounded-3xl border p-4 text-navy-800 transition-all duration-300 hover:-translate-y-2',
+        isCurrent && 'ring-2 ring-cyan-400/80 ring-offset-2',
       )}
       style={{
+        borderColor: stageBorder,
+        background: `linear-gradient(180deg, ${stageSoft} 0%, rgba(255,255,255,.98) 30%, ${stageSofter} 100%)`,
         transform: isCurrent ? 'perspective(900px) rotateX(1deg) translateY(-4px)' : 'perspective(900px) rotateX(3deg)',
-        boxShadow: `0 24px 45px -30px ${stage.color}, inset 0 1px 0 rgba(255,255,255,.8)`,
+        boxShadow: `0 26px 48px -31px ${stageShadow}, 0 10px 24px -22px ${stage.color}, inset 0 1px 0 rgba(255,255,255,.92)`,
       }}
     >
-      <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: `linear-gradient(90deg, ${stage.color}, ${stage.color}88)` }} />
+      <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: `linear-gradient(90deg, ${stage.color}, ${colorWithAlpha(stage.color, '8A')})` }} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[10px] font-bold opacity-60">المرحلة {stage.sort_order}</div>
+          <div className="text-[10px] font-bold text-navy-400">المرحلة {stage.sort_order}</div>
           <h4 className="mt-1 min-h-10 text-sm font-extrabold leading-5 text-navy-900">{stage.stage_name}</h4>
         </div>
         <div
           className="grid h-14 w-14 shrink-0 place-items-center rounded-full p-[5px] shadow-inner"
-          style={{ background: `conic-gradient(${stage.color} ${clamp(stage.progress_percent) * 3.6}deg, #e2e8f0 0)` }}
+          style={{ background: `conic-gradient(${stage.color} ${clamp(stage.progress_percent) * 3.6}deg, ${colorWithAlpha(stage.color, '20')} 0)` }}
         >
-          <div className="grid h-full w-full place-items-center rounded-full bg-white text-[11px] font-black text-navy-900">{stage.progress_percent}%</div>
+          <div className="grid h-full w-full place-items-center rounded-full bg-white/95 text-[11px] font-black text-navy-900">{stage.progress_percent}%</div>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="rounded-full bg-white/70 px-2 py-1 text-[10px] font-bold">{state.label}</span>
-        {stage.is_approval && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800"><CheckCircle2 className="h-3 w-3" /> اعتماد</span>}
+        <span className={classNames('rounded-full border px-2 py-1 text-[10px] font-bold', STATE_BADGE_CLASSES[state.tone])}>{state.label}</span>
+        {stage.is_approval && <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800"><CheckCircle2 className="h-3 w-3" /> اعتماد</span>}
       </div>
 
-      <div className="mt-3 space-y-2 rounded-2xl border border-white/70 bg-white/60 p-3 text-[11px] text-navy-600 shadow-inner">
-        <div className="flex items-start gap-2"><Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{ROLE_LABELS[stage.owner_role_key] ?? stage.owner_role_key}</span></div>
-        <div className="flex items-start gap-2"><UserRoundCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{owner?.full_name ?? 'بانتظار إسناد المسؤول'}</span></div>
-        <div className="flex items-start gap-2"><Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{shortDate(stage.planned_start)} ← {shortDate(stage.planned_end)}</span></div>
+      <div
+        className="mt-3 space-y-2 rounded-2xl border p-3 text-[11px] text-navy-600 shadow-inner"
+        style={{ borderColor: colorWithAlpha(stage.color, '20'), backgroundColor: colorWithAlpha(stage.color, '0A') }}
+      >
+        <div className="flex items-start gap-2"><Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: stage.color }} /><span>{ROLE_LABELS[stage.owner_role_key] ?? stage.owner_role_key}</span></div>
+        <div className="flex items-start gap-2"><UserRoundCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: stage.color }} /><span>{owner?.full_name ?? 'بانتظار إسناد المسؤول'}</span></div>
+        <div className="flex items-start gap-2"><Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: stage.color }} /><span>{shortDate(stage.planned_start)} ← {shortDate(stage.planned_end)}</span></div>
       </div>
 
       {stage.expected_output && (
-        <div className="mt-3 line-clamp-3 rounded-xl bg-navy-950/[.04] p-2.5 text-[10px] leading-5 text-navy-600">
+        <div
+          className="mt-3 line-clamp-3 rounded-xl border p-2.5 text-[10px] leading-5 text-navy-600"
+          style={{ borderColor: colorWithAlpha(stage.color, '18'), backgroundColor: colorWithAlpha(stage.color, '08') }}
+        >
           <strong className="block text-navy-800">المخرج المطلوب</strong>
           {stage.expected_output}
         </div>
@@ -341,7 +357,14 @@ function StageCard({
               type="button"
               onClick={() => void onProgress(stage, value)}
               disabled={(task?.progress_percent ?? stage.progress_percent) >= value}
-              className="rounded-lg border border-white bg-white/75 py-1.5 text-[9px] font-bold text-navy-600 transition hover:bg-araak-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              className="rounded-lg border bg-white/80 py-1.5 text-[9px] font-bold text-navy-600 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              style={{ borderColor: colorWithAlpha(stage.color, '28') }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.backgroundColor = stage.color;
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.backgroundColor = 'rgba(255,255,255,.8)';
+              }}
             >
               {value}%
             </button>

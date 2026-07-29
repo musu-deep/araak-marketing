@@ -49,19 +49,26 @@ interface InstitutionalErrorPayload {
   detail?: string;
 }
 
+function publicMessage(message: string): string {
+  return message
+    .replace(/Odoo/gi, 'النظام المؤسسي')
+    .replace(/ARAAK CEO/gi, 'النظام المؤسسي')
+    .replace(/بوابة النظام المؤسسي المؤسسية/g, 'البوابة المؤسسية');
+}
+
 async function edgeErrorMessage(error: unknown): Promise<string> {
   if (error && typeof error === 'object' && 'context' in error) {
     const context = (error as { context?: Response }).context;
     if (context) {
       try {
         const payload = await context.clone().json() as InstitutionalErrorPayload;
-        if (payload.message || payload.detail) return payload.message || payload.detail || '';
+        if (payload.message || payload.detail) return publicMessage(payload.message || payload.detail || '');
       } catch {
         // Fall through to the generic message below.
       }
     }
   }
-  return error instanceof Error ? error.message : 'تعذر الاتصال ببوابة الهوية المؤسسية.';
+  return publicMessage(error instanceof Error ? error.message : 'تعذر الاتصال بالبوابة المؤسسية.');
 }
 
 async function invokeEdge<T extends InstitutionalErrorPayload>(
@@ -71,7 +78,7 @@ async function invokeEdge<T extends InstitutionalErrorPayload>(
   const { data, error } = await supabase.functions.invoke<T>(functionName, { body });
   if (error) throw new Error(await edgeErrorMessage(error));
   if (!data) throw new Error('لم تُرجع الخدمة المؤسسية استجابة صالحة.');
-  if (data.ok === false) throw new Error(data.message || data.detail || 'تعذر تنفيذ العملية المؤسسية.');
+  if (data.ok === false) throw new Error(publicMessage(data.message || data.detail || 'تعذر تنفيذ العملية المؤسسية.'));
   return data;
 }
 
@@ -109,7 +116,7 @@ export async function institutionalSignIn(email: string, password: string): Prom
     user: payload.user,
     identitySource: payload.identity_source,
     workforceSource: payload.workforce_source,
-    warning: payload.warning,
+    warning: payload.warning ? publicMessage(payload.warning) : null,
   };
 }
 
@@ -125,7 +132,7 @@ export async function fetchOdooEmployees(accessToken: string): Promise<{
 }> {
   if (!accessToken) throw new Error('جلسة المنصة غير موجودة.');
   const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
-  if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الخروج ثم ادخل من جديد.');
+  if (!institutionalToken) throw new Error('انتهت الجلسة المؤسسية؛ سجّل الخروج ثم ادخل من جديد.');
 
   const payload = await invokeEdge<{
     ok: boolean;
@@ -155,7 +162,7 @@ export async function fetchOdooStatus(accessToken: string): Promise<{
 }> {
   if (!accessToken) throw new Error('جلسة المنصة غير موجودة.');
   const institutionalToken = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
-  if (!institutionalToken) throw new Error('انتهت جلسة ARAAK CEO؛ سجّل الدخول من جديد.');
+  if (!institutionalToken) throw new Error('انتهت الجلسة المؤسسية؛ سجّل الدخول من جديد.');
 
   const result = await invokeEdge<{
     ok: boolean;
@@ -170,6 +177,6 @@ export async function fetchOdooStatus(accessToken: string): Promise<{
   return {
     configured: true,
     connected: true,
-    message: result.warning || `تم الاتصال بالدليل المؤسسي (${result.directory_total ?? 0} موظف).`,
+    message: result.warning ? publicMessage(result.warning) : `تم تحديث الدليل المؤسسي (${result.directory_total ?? 0} موظف).`,
   };
 }

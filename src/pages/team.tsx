@@ -35,7 +35,8 @@ export function TeamPage() {
       setEmployees(result.employees);
       setDirectoryTotal(result.directoryTotal);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'تعذر تحميل فريق المنصة من Odoo.');
+      console.error('Failed to load platform team:', loadError);
+      setError('تعذر تحديث بيانات فريق المنصة حاليًا.');
       setEmployees([]);
     } finally {
       setLoading(false);
@@ -93,8 +94,8 @@ export function TeamPage() {
       <SectionHeader
         title="فريق المنصة"
         subtitle={isAdmin
-          ? 'الفريق التشغيلي المعتمد للمنصة، مستدعى من Odoo دون عرض بقية موظفي المجموعة'
-          : 'بياناتك الوظيفية ضمن فريق المنصة كما هي مسجلة في Odoo'}
+          ? 'الفريق التشغيلي المعتمد ومسؤولياته ضمن المنصة'
+          : 'بياناتك الوظيفية ومسؤولياتك ضمن فريق المنصة'}
         icon={Users}
         action={(
           <button
@@ -104,7 +105,7 @@ export function TeamPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-navy-200 bg-white px-4 py-2 text-sm font-medium text-navy-700 hover:border-araak-300 hover:text-araak-700 disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            تحديث من Odoo
+            تحديث البيانات
           </button>
         )}
       />
@@ -112,9 +113,9 @@ export function TeamPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <ShieldCheck className="w-5 h-5 text-emerald-700 mt-0.5 flex-shrink-0" />
         <div>
-          <div className="text-sm font-semibold text-emerald-800">المصدر المؤسسي: Odoo — النطاق: فريق المنصة فقط</div>
+          <div className="text-sm font-semibold text-emerald-800">الفريق التشغيلي المعتمد</div>
           <p className="text-xs text-emerald-700 mt-0.5">
-            تُستدعى بيانات الأعضاء التشغيلية المعتمدة فقط، ولا يُعرض كامل دليل موظفي المجموعة. الرئيس التنفيذي ونائبه ضمن الإشراف والاعتماد وليسا ضمن عدّاد الفريق التشغيلي.
+            تظهر هنا بيانات أعضاء الفريق المرتبطين بأدوار المنصة فقط، بينما يحتفظ الرئيس التنفيذي ونائبه بصلاحيات الإشراف والاعتماد.
           </p>
         </div>
       </div>
@@ -126,7 +127,7 @@ export function TeamPage() {
             <div className="text-2xl font-bold text-navy-900 mt-1">{directoryTotal || visibleEmployees.length}</div>
           </GlassCard>
           <GlassCard className="p-4">
-            <div className="text-xs text-navy-500">المتزامنون من Odoo</div>
+            <div className="text-xs text-navy-500">الأعضاء المتاحون</div>
             <div className="text-2xl font-bold text-araak-700 mt-1">{visibleEmployees.length}</div>
           </GlassCard>
           <GlassCard className="p-4">
@@ -144,13 +145,13 @@ export function TeamPage() {
 
       {error && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {error} تم عرض بيانات العضوية المحلية المؤقتة بدلًا من ذلك.
+          {error} تم عرض بيانات العضوية المتاحة بدلًا من ذلك.
         </div>
       )}
 
       {visibleEmployees.length === 0 ? (
         <GlassCard>
-          <EmptyState icon={Users} title="لا يوجد أعضاء ظاهرون" description="لم يعثر Odoo على تطابق لأعضاء فريق المنصة المعتمدين" />
+          <EmptyState icon={Users} title="لا يوجد أعضاء ظاهرون" description="لا توجد بيانات مطابقة لأعضاء فريق المنصة المعتمدين" />
         </GlassCard>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -173,7 +174,7 @@ export function TeamPage() {
 
               <div className="mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium bg-emerald-50 text-emerald-700">
                 <CheckCircle2 className="w-4 h-4" />
-                عضو معتمد ومزامن من Odoo
+                عضو معتمد ونشط
               </div>
 
               <div className="space-y-2 text-xs text-navy-500 pt-3 border-t border-navy-50">

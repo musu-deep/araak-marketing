@@ -204,6 +204,7 @@ export interface DocumentItem {
   opportunity_id: string | null;
   tender_id: string | null;
   file_url: string | null;
+  storage_path: string | null;
   file_size: number | null;
   mime_type: string | null;
   current_version: number;

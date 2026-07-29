@@ -137,16 +137,16 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
       >
         <div className="flex items-center justify-between px-5 py-5 border-b border-navy-100">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center border border-navy-100 shadow-sm overflow-hidden p-1.5">
               <img
-                src="/araak-logo.png"
-                alt="شعار أراك"
-                className="h-10 w-auto object-contain"
+                src="/favicon.svg"
+                alt="شعار اراك"
+                className="h-full w-full object-contain"
               />
             </div>
 
             <div className="min-w-0">
-              <div className="font-bold text-navy-900 text-base leading-tight">مجموعة أراك</div>
+              <div className="font-bold text-navy-900 text-base leading-tight">مجموعة اراك</div>
               <div className="text-[11px] text-navy-500 font-medium truncate">منصة إدارة المنافسات والمشاريع</div>
             </div>
           </div>

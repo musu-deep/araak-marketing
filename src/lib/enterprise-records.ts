@@ -97,7 +97,7 @@ async function gatewayRequest<T extends GatewayPayload>(body: Record<string, unk
 
   for (const baseUrl of gatewayUrls()) {
     try {
-      const response = await fetch(`${baseUrl}/marketing-gateway`, {
+      const response = await fetch(`${baseUrl}/api/marketing`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

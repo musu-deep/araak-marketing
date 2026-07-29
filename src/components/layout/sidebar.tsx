@@ -4,7 +4,6 @@ import {
   BellRing,
   Brain,
   ChevronLeft,
-  FileCog,
   FolderOpen,
   LayoutDashboard,
   Lightbulb,
@@ -39,8 +38,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'اللوحة التنفيذية', icon: LayoutDashboard, perm: 'dashboard', group: 'main' },
-  { key: 'opportunities', label: 'رادار الفرص', icon: Radar, perm: 'opportunity_radar', group: 'main' },
-  { key: 'tenders', label: 'إدارة المناقصات', icon: FileCog, perm: 'tender_management', group: 'main' },
+  { key: 'opportunities', label: 'الفرص والمنافسات', icon: Radar, perm: 'opportunity_radar', group: 'main' },
   { key: 'tasks', label: 'إدارة المهام والتزمين', icon: ListTodo, perm: 'tasks', group: 'main' },
   { key: 'team', label: 'فريق المنصة', icon: Users, perm: 'team', group: 'main' },
   { key: 'documents', label: 'مركز الوثائق', icon: FolderOpen, perm: 'documents', group: 'main' },
@@ -101,7 +99,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen, onClose }: Props) {
   const renderItems = (items: NavItem[]) => (
     <div className="space-y-1">
       {items.map((item) => {
-        const active = currentPage === item.key;
+        const active = currentPage === item.key || (item.key === 'opportunities' && currentPage === 'tenders');
         return (
           <button
             key={item.key}

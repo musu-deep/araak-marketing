@@ -1,4 +1,14 @@
-import { AlertTriangle, CheckCircle2, Clock3, ListChecks, ShieldCheck, UserRoundX } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  Gauge,
+  Layers3,
+  ListChecks,
+  ShieldCheck,
+  UserRoundX,
+  UsersRound,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { GlassCard, KpiCard, LoadingState, ProgressBar, SectionHeader } from '@/components/ui/primitives';
 import { supabase } from '@/lib/supabase';
@@ -72,6 +82,24 @@ export function ExecutiveControlPage() {
     <div className="space-y-5 max-w-7xl mx-auto">
       <SectionHeader title="المتابعة والرقابة" subtitle="لوحة الإدارة العليا لمراقبة المسؤوليات والتعثر والتأخير ومستوى الإنجاز" icon={ShieldCheck} />
       {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      <section className="rounded-2xl border border-araak-100 bg-gradient-to-l from-white via-white to-araak-50/70 p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-bold text-navy-900">نطاق المنصة التنفيذي</h2>
+            <p className="text-xs text-navy-500 mt-1">مؤشرات تعريفية داخلية ضمن مساحة الإدارة العليا فقط</p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-navy-900 px-3 py-1.5 text-[11px] font-semibold text-white">
+            <ShieldCheck className="w-3.5 h-3.5 text-araak-300" />
+            الرئيس التنفيذي ونائب الرئيس
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <KpiCard label="وحدات المنصة" value="13+" icon={Layers3} color="araak" footer="وحدات تشغيلية ورقابية متكاملة" />
+          <KpiCard label="مؤشرات الأداء" value="24+" icon={Gauge} color="gold" footer="مؤشرات قياس ومتابعة للإدارة العليا" />
+          <KpiCard label="أدوار الفريق" value="7" icon={UsersRound} color="navy" footer="أدوار مؤسسية مرتبطة بالصلاحيات" />
+        </div>
+      </section>
 
       <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard label="المهام المفتوحة" value={summary.open.length} icon={ListChecks} color="navy" />

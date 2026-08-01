@@ -10,9 +10,7 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Gauge,
   KeyRound,
-  Layers,
   Mail,
   Shield,
   Sparkles,
@@ -98,20 +96,6 @@ export function LandingPage() {
               <p className="mt-6 text-lg lg:text-xl text-navy-200 leading-relaxed max-w-2xl">
                 منظومة رقمية متكاملة لإدارة ومتابعة المنافسات والمشاريع، من استكشاف الفرص ودراسة الكراسة حتى الاعتماد والرفع ونتائج المنافسة.
               </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { icon: Layers, label: 'وحدات المنصة', value: '13+' },
-                { icon: Gauge, label: 'مؤشرات الأداء', value: '24+' },
-                { icon: Users, label: 'أدوار الفريق', value: '7' },
-              ].map((stat) => (
-                <div key={stat.label} className="glass-dark rounded-2xl p-5 border border-white/10">
-                  <stat.icon className="w-5 h-5 text-araak-400 mb-2" />
-                  <div className="text-3xl font-bold text-white">{stat.value}</div>
-                  <div className="text-navy-300 text-sm">{stat.label}</div>
-                </div>
-              ))}
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3">

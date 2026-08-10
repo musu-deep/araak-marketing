@@ -1,9 +1,7 @@
 const INSTITUTIONAL_TOKEN_KEY = 'araak_ceo_access_token';
 
 const DEFAULT_GATEWAYS = [
-  'https://musu-deep-nexgen-executives-ar.vercel.app',
-  'https://nexgen-executives.vercel.app',
-  'https://musu-deep-nexgen-executives-ar-4dip.vercel.app',
+  'https://ceo-office-platform.onrender.com',
 ];
 
 export type EnterpriseRecordKind = 'opportunity' | 'tender';

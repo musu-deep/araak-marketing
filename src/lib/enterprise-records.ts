@@ -1,8 +1,6 @@
-const INSTITUTIONAL_TOKEN_KEY = 'araak_ceo_access_token';
+import { supabase } from './supabase';
 
-const DEFAULT_GATEWAYS = [
-  'https://ceo-office-platform.onrender.com',
-];
+const INSTITUTIONAL_TOKEN_KEY = 'araak_ceo_access_token';
 
 export type EnterpriseRecordKind = 'opportunity' | 'tender';
 
@@ -78,45 +76,46 @@ function publicMessage(message: string): string {
     .replace(/ARAAK CEO/gi, 'البوابة المؤسسية');
 }
 
-function gatewayUrls(): string[] {
-  const configured = String(import.meta.env.VITE_ARAAK_CEO_API_URL || '').trim().replace(/\/+$/, '');
-  return Array.from(new Set([configured, ...DEFAULT_GATEWAYS].filter(Boolean)));
-}
-
 function institutionalToken(): string {
   const token = sessionStorage.getItem(INSTITUTIONAL_TOKEN_KEY);
   if (!token) throw new Error('انتهت الجلسة المؤسسية؛ سجّل الخروج ثم ادخل من جديد.');
   return token;
 }
 
-async function gatewayRequest<T extends GatewayPayload>(body: Record<string, unknown>): Promise<T> {
-  const token = institutionalToken();
-  const errors: string[] = [];
-
-  for (const baseUrl of gatewayUrls()) {
+async function functionErrorMessage(error: unknown): Promise<string> {
+  const fallback = error instanceof Error ? error.message : 'تعذر الوصول إلى السجل المركزي.';
+  const context = (error as { context?: unknown } | null)?.context;
+  if (context instanceof Response) {
     try {
-      const response = await fetch(`${baseUrl}/api/marketing`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json; charset=utf-8',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      const payload = await response.json().catch(() => ({})) as T;
-
-      if (response.ok && payload.ok !== false) return payload;
-      const message = publicMessage(payload.message || payload.detail || `HTTP ${response.status}`);
-      if ([400, 401, 403, 413, 422].includes(response.status)) throw new Error(message);
-      errors.push(`${baseUrl}: ${message}`);
-    } catch (error) {
-      if (error instanceof Error && /الجلسة|مطلوب|يتجاوز|القراءة فقط/.test(error.message)) throw error;
-      errors.push(`${baseUrl}: ${error instanceof Error ? error.message : 'تعذر الاتصال'}`);
+      const payload = await context.clone().json() as { message?: string; detail?: string };
+      return publicMessage(payload.message || payload.detail || fallback);
+    } catch {
+      try {
+        const text = await context.clone().text();
+        return publicMessage(text || fallback);
+      } catch {
+        return publicMessage(fallback);
+      }
     }
   }
+  return publicMessage(fallback);
+}
 
-  throw new Error(publicMessage(`تعذر الوصول إلى السجل المركزي. ${errors.join(' | ')}`));
+async function gatewayRequest<T extends GatewayPayload>(body: Record<string, unknown>): Promise<T> {
+  const token = institutionalToken();
+  const { data, error } = await supabase.functions.invoke('enterprise-records', {
+    body: {
+      institutional_token: token,
+      payload: body,
+    },
+  });
+
+  if (error) throw new Error(await functionErrorMessage(error));
+  const payload = (data || {}) as T;
+  if (payload.ok === false) {
+    throw new Error(publicMessage(payload.message || payload.detail || 'تعذر تنفيذ العملية في السجل المركزي.'));
+  }
+  return payload;
 }
 
 function fileToBase64(file: File): Promise<string> {
